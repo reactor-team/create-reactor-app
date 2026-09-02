@@ -37,7 +37,6 @@
   ],
   "packageManager": "pnpm@10.12.1",
   "dependencies": {
-    "@reactor-team/js-sdk": "^2.2.2",
     "chalk": "^5.3.0",
     "inquirer": "^14.0.2",
     "simple-git": "^3.36.0"
