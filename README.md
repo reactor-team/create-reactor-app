@@ -117,6 +117,15 @@ To unlink when you're done:
 pnpm unlink --global
 ```
 
+## Releasing
+
+Publishing to npm is automatic: bump `version` in `package.json`, merge to
+`main`, then [create a GitHub Release](https://github.com/reactor-team/create-reactor-app/releases/new)
+tagging that version. The [`publish` workflow](.github/workflows/publish.yml)
+builds and runs `npm publish` for you via npm's trusted publishing (OIDC) —
+no token to manage. It no-ops if that version is already on the registry, so
+re-running a release is always safe.
+
 ## License
 
 [Apache 2.0](./LICENSE) © 2024-2026 Reactor Technologies, Inc.

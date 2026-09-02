@@ -1,0 +1,35 @@
+name: Publish Package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6.0.10
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install
+      - run: pnpm build
+
+      - name: Publish if version is new
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "create-reactor-app@${version}" version >/dev/null 2>&1; then
+            echo "create-reactor-app@${version} already published; skipping."
+          else
+            npm publish --access public --provenance
+          fi
