@@ -60,3 +60,20 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+
+  ci-complete:
+    name: CI Complete
+    needs: [build, format, unit-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify no job failed
+        run: |
+          for r in "${{ needs.build.result }}" \
+                   "${{ needs.format.result }}" \
+                   "${{ needs.unit-tests.result }}"; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+              echo "::error::a required job failed ($r)"; exit 1
+            fi
+          done
+          echo "All CI checks passed."
