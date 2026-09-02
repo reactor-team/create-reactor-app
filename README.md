@@ -54,7 +54,7 @@ npx create-reactor-app my-app --model=helios --token ghp_xxxxxxxxxxxx
 
 ### Available Models
 
-Templates live in the [`examples/`](https://github.com/reactor-team/js-sdk/tree/main/examples) directory of this repository. By default the model name maps 1:1 to a folder of the same name (e.g. `--model=helios` clones the `examples/helios/` folder).
+Templates live in the [`examples/api-models-examples/`](https://github.com/reactor-team/reactor-cookbook/tree/main/examples/api-models-examples) directory of [reactor-cookbook](https://github.com/reactor-team/reactor-cookbook). By default the model name maps 1:1 to a folder of the same name (e.g. `--model=helios` clones the `examples/api-models-examples/helios/` folder).
 
 The CLI also supports an optional alias map (`MODEL_MAP` in `bin/create-reactor-app.ts`) for cases where the public model name needs to differ from the folder name. It is empty by default — add an entry only when you want a name → folder rename.
 
@@ -77,7 +77,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to see your 
 
 ## Examples Repository
 
-All templates are sourced from the official examples in the [Reactor SDK repository](https://github.com/reactor-team/js-sdk). You can browse the examples directory to see the full source code and understand how each template works.
+All templates are sourced from [reactor-cookbook](https://github.com/reactor-team/reactor-cookbook). You can browse the examples directory to see the full source code and understand how each template works.
 
 ## Documentation
 
@@ -95,9 +95,6 @@ For comprehensive guides, API references, and tutorials, visit the official Reac
 To test or develop the CLI locally:
 
 ```bash
-# Navigate to the create-app package
-cd packages/create-app
-
 # Install dependencies
 pnpm install
 
@@ -122,13 +119,13 @@ pnpm unlink --global
 
 ## License
 
-[Apache 2.0](https://github.com/reactor-team/js-sdk/blob/main/LICENSE) © 2024-2026 Reactor Technologies, Inc.
+[Apache 2.0](./LICENSE) © 2024-2026 Reactor Technologies, Inc.
 
 ## Support
 
 - 📖 [Documentation](https://docs.reactor.inc)
-- 💻 [Examples Repository](https://github.com/reactor-team/js-sdk)
-- 🐛 [Report Issues](https://github.com/reactor-team/js-sdk/issues)
+- 💻 [Examples Repository](https://github.com/reactor-team/reactor-cookbook)
+- 🐛 [Report Issues](https://github.com/reactor-team/create-reactor-app/issues)
 
 ---
 
