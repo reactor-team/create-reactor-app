@@ -43,11 +43,16 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "prettier": "^3.8.4",
     "tsup": "^8.0.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
   },
   "scripts": {
     "build": "tsup",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "install-cli": "tsup && pnpm link --global && echo '\n✅ create-reactor-app linked globally. Run it with:\n\n  create-reactor-app\n'"
   }
 }

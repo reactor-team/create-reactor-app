@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["bin/create-reactor-app.ts"],
+  entry: ["bin/create-reactor-app.ts", "bin/lib.ts"],
   outDir: "dist/bin",
   bundle: false,
   splitting: false,
