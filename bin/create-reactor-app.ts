@@ -12,9 +12,9 @@ import {
 } from "./lib.js";
 
 const REPO_OWNER = "reactor-team";
-const REPO_NAME = "reactor-cookbook";
+const REPO_NAME = "create-reactor-app";
 const REPO_URL = `github.com/${REPO_OWNER}/${REPO_NAME}.git`;
-const EXAMPLES_PATH = "examples/api-models-examples";
+const EXAMPLES_PATH = "examples";
 
 function getAuthenticatedRepoUrl(token: string): string {
   return `https://${token}@${REPO_URL}`;
