@@ -54,7 +54,7 @@ npx create-reactor-app my-app --model=helios --token ghp_xxxxxxxxxxxx
 
 ### Available Models
 
-Templates live in the [`examples/api-models-examples/`](https://github.com/reactor-team/reactor-cookbook/tree/main/examples/api-models-examples) directory of [reactor-cookbook](https://github.com/reactor-team/reactor-cookbook). By default the model name maps 1:1 to a folder of the same name (e.g. `--model=helios` clones the `examples/api-models-examples/helios/` folder).
+Templates live in [`templates/`](./templates) in this repository — one runnable Next.js app per model Reactor serves on the API. By default the model name maps 1:1 to a folder of the same name (e.g. `--model=helios` clones the `templates/helios/` folder), so **a folder name there is a public identifier** and renaming one breaks the CLI.
 
 The CLI also supports an optional alias map (`MODEL_MAP` in `bin/create-reactor-app.ts`) for cases where the public model name needs to differ from the folder name. It is empty by default — add an entry only when you want a name → folder rename.
 
@@ -62,7 +62,7 @@ Run the CLI without `--model` to see the list of available models in the templat
 
 ### Private Repository Access
 
-If the templates repository is private, you will be prompted for a GitHub token when fetching the template list or cloning fails. You can also pass `--token` (or `-t`) directly to skip the prompt.
+While this repository is private, `npx create-reactor-app` cannot read the template list or clone anonymously, so it prompts for a GitHub token. Pass `--token` (or `-t`) to skip the prompt. Once the repository is public the token is no longer needed and both paths work unauthenticated.
 
 ## Getting Started After Creation
 
@@ -75,9 +75,11 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to see your application running. Make sure to setup your API keys first!
 
-## Examples Repository
+## Templates
 
-All templates are sourced from [reactor-cookbook](https://github.com/reactor-team/reactor-cookbook). You can browse the examples directory to see the full source code and understand how each template works.
+Every template lives in [`templates/`](./templates), which has its own README covering what each one demonstrates, the auth model they all share, and the one behaviour of `@reactor-team/js-sdk` 3.x that is easy to get wrong. Each folder also carries a `skill/SKILL.md` written for someone extending it.
+
+The CLI resolves templates from this repository's **default branch**, not from the installed package, so a template fix reaches users as soon as it merges — no release required. A change to the CLI itself still needs a release.
 
 ## Documentation
 
@@ -133,7 +135,7 @@ re-running a release is always safe.
 ## Support
 
 - 📖 [Documentation](https://docs.reactor.inc)
-- 💻 [Examples Repository](https://github.com/reactor-team/reactor-cookbook)
+- 💻 [Templates](./templates)
 - 🐛 [Report Issues](https://github.com/reactor-team/create-reactor-app/issues)
 
 ---
