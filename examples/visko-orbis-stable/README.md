@@ -1,4 +1,4 @@
-# Visko Orbis Stable — dev example
+# Visko Orbis Stable
 
 Clone this folder and read top-to-bottom: you should understand the model's entire API surface in under five minutes — and have a working frontend to build from.
 
@@ -57,9 +57,21 @@ Plus the model's ancillary surface, deliberate and small: **resolution** (a pick
 
 ## Talking to the model
 
-This example runs on the generic **`@reactor-team/js-sdk` 3.0.0** (`ReactorProvider` + `useReactor` + `useReactorMessage`). Model commands go out as raw `sendCommand("<wire_name>", {...})` frames — `set_prompt`, `set_image`, `set_seed`, `set_resolution`, `set_audio_enabled`, `start`, `pause`, `resume`, `reset` — and model messages (`state`, `generation_started`, `prompt_accepted`, …) arrive on the `message` channel. The thin helpers in `app/lib/visko.ts` (`useViskoState`, `useModelMessageOfType`, `sendSetPrompt`, …) are sugar over the generic store, nothing more. That's the entire SDK surface the app uses — no other package is required.
+This example drives the published typed client, `@reactor-models/visko-orbis-stable`.
+`<ViskoOrbisStableProvider>` owns the session and `useViskoOrbisStable()` carries the
+commands as named methods — `setPrompt`, `setImage`, `setSeed`,
+`setResolution`, `setAudioEnabled`, `start`, `pause`, `resume`, `reset` — so
+no wire strings appear in component code. Messages arrive on typed per-type
+hooks (`useViskoOrbisStableState`, `…CommandError`, `…GenerationStarted`,
+`…ChunkComplete`), aliased once in [`app/lib/visko.ts`](app/lib/visko.ts) to
+keep the long names in one place.
 
-Stuck? The deeper guide to every pattern here — connection model, snapshot lifecycle, I2V ack chain, prompt design rules, every gotcha this example is trying to teach — is [`skill/SKILL.md`](skill/SKILL.md).
+The one place the app reaches past the typed package is
+[`app/components/SnapClip.tsx`](app/components/SnapClip.tsx), which imports
+the recording surface from `@reactor-team/js-sdk`. That is deliberate:
+recording is model-agnostic and the typed packages re-export none of its
+components. Anything that depends on this model's events, messages, or
+commands belongs on the typed package instead.
 
 ## Sibling example
 

@@ -142,6 +142,47 @@ an `action_error` broadcast; the facade converts both into a thrown
 
 One entry in [`lib/featured-worlds.json`](../lib/featured-worlds.json): `key`, `title`, `mode` (1 or 2), a paragraph `prompt`, and a `gradient` for the bubble. No component changes. To make it attach instantly instead of building, add its `encryptedWorldId` to [`lib/world-pins.json`](../lib/world-pins.json) (the shipped entries are `REPLACE_WITH_...` placeholders, treated as unpinned until you drop in a real id). Keep prompts paragraph-length with explicit setting and camera framing; short prompts produce unstable worlds.
 
+## Capturing clips
+
+`SnapClip` captures the trailing seconds of the live stream and opens a preview
+modal with a download. `requestClip(seconds)` asks for the window,
+`<ClipPlayer>` previews it, `<ClipDownloadButton>` saves an MP4.
+
+This is the **one place** in the app where importing from
+`@reactor-team/js-sdk` directly is idiomatic rather than a smell. The typed
+package carries `requestClip` and `downloadClipAsFile` on its hook, but
+deliberately re-exports none of the components or `RecordingError`, because
+none of them depend on model identity. The rule for anything else you add: if
+it needs this model's events, messages, or commands, take it from the typed
+package; if the same code would work against any model, the base SDK is fine.
+
+The shape, in five parts:
+
+1. Gate on `status !== "ready"` and return `null`, so the panel self-hides with
+   the session and needs no phase awareness.
+2. Read `requestClip` off `useReactor((s) => s.requestClip)`. `useReactor`
+   works inside the typed provider because that provider wraps
+   `<ReactorProvider>` internally.
+3. Catch `RecordingError` and surface `code` / `reason` inline. Its typed
+   reasons are `DISCONNECTED`, `RECORDER_DISABLED`, `INVALID_DURATION`, and
+   `REQUEST_TIMEOUT`.
+4. Compose the modal from `<ClipPlayer>` and `<ClipDownloadButton>`, both of
+   which take `onError` / `onSuccess`. They operate on a `Clip` value alone, so
+   the modal survives a disconnect.
+5. No token plumbing — the clip components inherit the JWT resolver from the
+   provider through React context. The exception is a portal rendered outside
+   the provider subtree (a toast in `app/layout.tsx`), where you capture the
+   resolver with `reactor.getJwtResolver()` at action time and thread it down.
+
+`hls.js` is a direct dependency, not a peer: `<ClipPlayer>` plays HLS natively
+on Safari and dynamically imports `hls.js` everywhere else. Without it the
+preview surfaces an inline error and downloads still work.
+
+For a whole session rather than a trailing window, `reactor.requestRecording()`
+is the counterpart, and `useClipDownload` is the headless hook if you want your
+own download UI. Either way, **clip URLs are short-lived** — a few minutes. The
+downloaded file is the artifact; the URL is not something to share or persist.
+
 ## Brand alignment
 
 The app maps Reactor's design tokens from `@reactor-team/ui`'s stylesheet into shadcn theme variables in [`app/globals.css`](../app/globals.css). Use the theme utilities (`bg-primary`, `text-primary-foreground`, `border-border`, `font-mono`); don't invent parallel color systems with raw hex. Don't import `@reactor-team/ui` **React** components into Server Components; the stylesheet import is all you need. The app is dark-only via the `dark` class on `<html>`.

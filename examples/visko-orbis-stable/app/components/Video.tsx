@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ReactorView, useReactor } from "@reactor-team/js-sdk";
-import { useGenerationStarted, useChunkComplete } from "../lib/visko";
+import {
+  MainVideoView,
+  useChunkComplete,
+  useGenerationStarted,
+  useVideoTrack,
+} from "../lib/visko";
 
 // The whole right side of the screen — black rounded panel with the
-// model's main_video track rendered pre-bound via the generic
-// <ReactorView track="main_video">. No refs, no srcObject, no autoplay
-// tricks.
+// model's main_video track rendered by the typed SDK's
+// <ViskoOrbisStableMainVideoView>, a pre-bound <ReactorView track="main_video">.
+// No refs, no srcObject, no autoplay tricks.
 //
 // The overlay covers the SR-priming window. The model's FIRST chunk
 // emits 0 frames (frames_emitted: 0) while the super-resolution model
@@ -18,7 +22,7 @@ import { useGenerationStarted, useChunkComplete } from "../lib/visko";
 // never disagree.
 //
 // AUDIO: main_audio rides INSIDE the <video> element via the SDK's
-// `audioTrack` prop — `ReactorView` mixes both tracks into one MediaStream.
+// `audioTrack` prop — the view mixes both tracks into one MediaStream.
 // When an audioTrack is set the SDK defaults muted=false, so sound plays
 // automatically in the common case: the user has always clicked a preset /
 // "Start" (a gesture that satisfies the autoplay policy) before audio
@@ -30,7 +34,7 @@ import { useGenerationStarted, useChunkComplete } from "../lib/visko";
 // double-plays the track and gives the user no unmute affordance.
 export function Video() {
   const [priming, setPriming] = useState(false);
-  const videoTrack = useReactor((s) => s.tracks["main_video"]);
+  const videoTrack = useVideoTrack();
 
   useGenerationStarted(() => setPriming(true));
   // Clear the overlay the moment a chunk actually produced frames — the
@@ -58,10 +62,9 @@ export function Video() {
        * warmup is the SDK re-attaching the stream on track unmute — benign,
        * self-recovers, and documented in the SKILL notes. Don't chase it.
        */}
-      <ReactorView
+      <MainVideoView
         className="h-full w-full"
         videoObjectFit="contain"
-        track="main_video"
         audioTrack="main_audio"
       />
       {showPriming && (

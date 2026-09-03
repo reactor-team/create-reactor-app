@@ -1,6 +1,6 @@
 ---
 name: fast-h3
-description: Extend the FastH3 Episodes starter — a Next.js app on @reactor-models/fast-h3 that composes multi-scene episodes and plays them as one continuous video via chained clips. Covers the model's queue contract, the hard-cut prompting rule that keeps chained scenes from degrading, the auth pattern, the state-snapshot pattern, capacity/error handling, and every model knob deliberately not shipped. For the multi-viewer LiveKit broadcast version of fast-h3, see ../../fast-h3-livestream instead.
+description: Extend the FastH3 Episodes starter — a Next.js app on @reactor-models/fast-h3 that composes multi-scene episodes and plays them as one continuous video via chained clips. Covers the model's queue contract, the hard-cut prompting rule that keeps chained scenes from degrading, the auth pattern, the state-snapshot pattern, capacity/error handling, and every model knob deliberately not shipped.
 ---
 
 # Extending FastH3 Episodes
@@ -8,24 +8,6 @@ description: Extend the FastH3 Episodes starter — a Next.js app on @reactor-mo
 You've cloned this folder and want to build on it. This guide carries the
 model's contract, the app's patterns, and the prompting rules that keep the
 output looking right — so your change lands without re-learning any of it.
-
-## Which fast-h3 example am I in?
-
-Two examples build on this model, with different product shapes:
-
-|                      | **`fast-h3` (this app)**                              | [`fast-h3-livestream`](../../fast-h3-livestream)                                  |
-| -------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Shape                | One browser session, private to the person running it | A 24/7 broadcast channel many viewers watch together                              |
-| Stack                | Next.js only, `@reactor-models/fast-h3` typed SDK     | Python streamer (`reactor-sdk`) publishing into a LiveKit room + a Next.js viewer |
-| Who drives the model | The browser, directly                                 | The Python streamer; viewers only chat                                            |
-| Episode source       | The composer UI (AI writer or by hand)                | Viewer chat ideas + a default scene rotation                                      |
-
-`create-reactor-app` scaffolds **one folder per project** —
-`--model=fast-h3` gives you this app. If what you actually want is the
-channel (a stream that keeps running with an audience), scaffold or clone
-`fast-h3-livestream` instead; its own `skill/SKILL.md` is the guide there.
-Both skills document the same model contract; this one owns the browser
-patterns, that one owns the streamer/room patterns.
 
 ## The model in three sentences
 
@@ -184,6 +166,47 @@ phase; the typed method is ready.
 | Queue reordering                 | `move`                                       | queue panel         | 0 = front; clips never cross queues except by building                |
 | Explicit playback                | `play({ clip_id })`                          | queue panel         | This app leans on autoplay instead                                    |
 | Full reset                       | `reset`                                      | status badge        | Drops both queues and the retained history                            |
+
+## Capturing clips
+
+`SnapClip` captures the trailing seconds of the live stream and opens a preview
+modal with a download. `requestClip(seconds)` asks for the window,
+`<ClipPlayer>` previews it, `<ClipDownloadButton>` saves an MP4.
+
+This is the **one place** in the app where importing from
+`@reactor-team/js-sdk` directly is idiomatic rather than a smell. The typed
+package carries `requestClip` and `downloadClipAsFile` on its hook, but
+deliberately re-exports none of the components or `RecordingError`, because
+none of them depend on model identity. The rule for anything else you add: if
+it needs this model's events, messages, or commands, take it from the typed
+package; if the same code would work against any model, the base SDK is fine.
+
+The shape, in five parts:
+
+1. Gate on `status !== "ready"` and return `null`, so the panel self-hides with
+   the session and needs no phase awareness.
+2. Read `requestClip` off `useReactor((s) => s.requestClip)`. `useReactor`
+   works inside the typed provider because that provider wraps
+   `<ReactorProvider>` internally.
+3. Catch `RecordingError` and surface `code` / `reason` inline. Its typed
+   reasons are `DISCONNECTED`, `RECORDER_DISABLED`, `INVALID_DURATION`, and
+   `REQUEST_TIMEOUT`.
+4. Compose the modal from `<ClipPlayer>` and `<ClipDownloadButton>`, both of
+   which take `onError` / `onSuccess`. They operate on a `Clip` value alone, so
+   the modal survives a disconnect.
+5. No token plumbing — the clip components inherit the JWT resolver from the
+   provider through React context. The exception is a portal rendered outside
+   the provider subtree (a toast in `app/layout.tsx`), where you capture the
+   resolver with `reactor.getJwtResolver()` at action time and thread it down.
+
+`hls.js` is a direct dependency, not a peer: `<ClipPlayer>` plays HLS natively
+on Safari and dynamically imports `hls.js` everywhere else. Without it the
+preview surfaces an inline error and downloads still work.
+
+For a whole session rather than a trailing window, `reactor.requestRecording()`
+is the counterpart, and `useClipDownload` is the headless hook if you want your
+own download UI. Either way, **clip URLs are short-lived** — a few minutes. The
+downloaded file is the artifact; the URL is not something to share or persist.
 
 ## Common mistakes when extending
 

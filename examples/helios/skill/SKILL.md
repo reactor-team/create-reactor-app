@@ -316,7 +316,7 @@ await start();
 
 **`setConditioning` is still the better call when you know both pieces up front**,
 for a different reason than before. It is one message and one handler, so the
-model validates → decodes → VAE-encodes → commits both as a single transaction: if
+model validates, decodes, and commits both as a single transaction: if
 anything fails (no prompt, no image, non-image MIME, undecodable bytes) it emits
 `command_error` and **mutates nothing**, leaving no partial state to recover from.
 Two separate awaited commands can each succeed or fail on their own, which means a
@@ -425,7 +425,7 @@ await start();
 
 1. Get bytes (`fetch(url).then(r => r.blob())` for a curated image, or `e.target.files[0]` from `<input type="file">`).
 2. `await uploadFile(blob)` → returns a `FileRef`.
-3. `await setConditioning({ prompt, image: ref })` — atomic. The SDK lifts the `FileRef` out of the params into an `uploads` envelope automatically; you treat `image: ref` as a regular field. Both pieces of conditioning are validated, decoded, VAE-encoded, and committed as one transaction. On failure the model emits `command_error` and leaves state untouched.
+3. `await setConditioning({ prompt, image: ref })` — atomic. The SDK lifts the `FileRef` out of the params into an `uploads` envelope automatically; you treat `image: ref` as a regular field. Both pieces of conditioning are validated, decoded, and committed as one transaction. On failure the model emits `command_error` and leaves state untouched.
 4. `await start()`. Nothing to wait for beyond the previous await: `setConditioning` resolved only once the model had committed both pieces.
 
 ### Custom upload — user picks an image, types a prompt later

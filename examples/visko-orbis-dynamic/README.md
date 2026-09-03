@@ -1,10 +1,9 @@
-# Visko Orbis Dynamic — dev example
+# Visko Orbis Dynamic
 
 Clone this folder and read top-to-bottom: you should understand the model's entire API surface in under five minutes — and have a working frontend to build from.
 
 **Visko Orbis · Dynamic** is Reactor's real-time, steerable video generation model. You give it a prompt (and optionally an image to anchor the first frame), it produces a continuous video stream, and you can **change the prompt mid-flight** — the picture morphs into the new description at the next chunk boundary instead of cutting. That mid-flight morph is the hero feature, and most of this example exists to teach it.
 
-> ✅ **Typed surface** — this example drives the published `@reactor-models/visko-orbis-dynamic@1.4.0` typed client. Its `AudioPanel` is a real **generate-sound toggle** (sends `set_audio_enabled`; the next `start` decides, mirrored by `ResolutionAccepted`/`audio_enabled` on the `state` snapshot), and `SessionOptions` picks the delivery resolution straight from `state.available_resolutions` (never hard-coded; `native` = the model's generated geometry). Validated with `tsc --noEmit` + `next build` green and a fresh live PROD e2e.
 
 ## Quick start
 
@@ -59,9 +58,21 @@ Plus the model's ancillary surface, deliberate and small: **resolution** (a pick
 
 ## Talking to the model
 
-This example runs on the generic **`@reactor-team/js-sdk` 3.0.0** (`ReactorProvider` + `useReactor` + `useReactorMessage`). Model commands go out as raw `sendCommand("<wire_name>", {...})` frames — `set_prompt`, `set_image`, `set_seed`, `set_resolution`, `set_audio_enabled`, `start`, `pause`, `resume`, `reset` — and model messages (`state`, `generation_started`, `prompt_accepted`, …) arrive on the `message` channel. The thin helpers in `app/lib/visko.ts` (`useViskoState`, `useModelMessageOfType`, `sendSetPrompt`, …) are sugar over the generic store, nothing more. That's the entire SDK surface the app uses — no other package is required.
+This example drives the published typed client, `@reactor-models/visko-orbis-dynamic`.
+`<ViskoOrbisDynamicProvider>` owns the session and `useViskoOrbisDynamic()` carries the
+commands as named methods — `setPrompt`, `setImage`, `setSeed`,
+`setResolution`, `setAudioEnabled`, `start`, `pause`, `resume`, `reset` — so
+no wire strings appear in component code. Messages arrive on typed per-type
+hooks (`useViskoOrbisDynamicState`, `…CommandError`, `…GenerationStarted`,
+`…ChunkComplete`), aliased once in [`app/lib/visko.ts`](app/lib/visko.ts) to
+keep the long names in one place.
 
-Stuck? The deeper guide to every pattern here — connection model, snapshot lifecycle, I2V ack chain, prompt design rules, every gotcha this example is trying to teach — is [`skill/SKILL.md`](skill/SKILL.md).
+The one place the app reaches past the typed package is
+[`app/components/SnapClip.tsx`](app/components/SnapClip.tsx), which imports
+the recording surface from `@reactor-team/js-sdk`. That is deliberate:
+recording is model-agnostic and the typed packages re-export none of its
+components. Anything that depends on this model's events, messages, or
+commands belongs on the typed package instead.
 
 ## Sibling example
 

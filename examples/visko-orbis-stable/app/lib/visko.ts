@@ -9,6 +9,8 @@ import {
   useViskoOrbisStableGenerationStarted,
   useViskoOrbisStableGenerationComplete,
   useViskoOrbisStableChunkComplete,
+  useViskoOrbisStableTrack,
+  ViskoOrbisStableMainVideoView,
   FileRef,
   MODEL_NAME,
   type ViskoOrbisStableStateMessage,
@@ -30,6 +32,8 @@ export const useCommandError = useViskoOrbisStableCommandError;
 export const useGenerationStarted = useViskoOrbisStableGenerationStarted;
 export const useGenerationComplete = useViskoOrbisStableGenerationComplete;
 export const useChunkComplete = useViskoOrbisStableChunkComplete;
+export const useVideoTrack = () => useViskoOrbisStableTrack("main_video");
+export const MainVideoView = ViskoOrbisStableMainVideoView;
 // The per-component typed store access — returns the whole typed Model store.
 // Aliased here so components import from one place.
 export { useViskoOrbisStable };

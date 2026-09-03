@@ -9,6 +9,8 @@ import {
   useViskoOrbisDynamicGenerationStarted,
   useViskoOrbisDynamicGenerationComplete,
   useViskoOrbisDynamicChunkComplete,
+  useViskoOrbisDynamicTrack,
+  ViskoOrbisDynamicMainVideoView,
   FileRef,
   MODEL_NAME,
   type ViskoOrbisDynamicStateMessage,
@@ -28,6 +30,8 @@ export const useCommandError = useViskoOrbisDynamicCommandError;
 export const useGenerationStarted = useViskoOrbisDynamicGenerationStarted;
 export const useGenerationComplete = useViskoOrbisDynamicGenerationComplete;
 export const useChunkComplete = useViskoOrbisDynamicChunkComplete;
+export const useVideoTrack = () => useViskoOrbisDynamicTrack("main_video");
+export const MainVideoView = ViskoOrbisDynamicMainVideoView;
 // The per-component typed store access — returns the whole typed Model store.
 // Aliased here so components import from one place.
 export { useViskoOrbisDynamic };

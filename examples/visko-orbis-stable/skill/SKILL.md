@@ -34,7 +34,7 @@ These come from the model's own schema doc-comments and the productize hand-off.
 
 - **Startup is minutes.** One live session per deployment; the SR model compiles, then the model runs **three warmup chunks** before it answers commands. `StatusBadge` labels `waiting` honestly rather than spinning a mystery. A crashed/hard-exited client can hold the pod as a "zombie" until the reaper frees it (~1–2 minutes — one empirical data point, N=1); retries there are cheap, don't treat it as "the example is broken".
 - **The first chunk emits ZERO frames** (`frames_emitted: 0` — SR priming). First picture lands ~2 chunks / ~3.7 s in. Don't surface chunk 1 as an error; hold a "priming" state (the `Video` overlay + `StatusBadge` both do). **Caveat:** on a warm run the whole window can pass in under a second-poll, so describe it in copy as _something you may briefly see_, not a guaranteed always-visible state — clients who never spot it should not think the stream is stuck.
-- **A 429 is CAPACITY, not a disconnect.** The deployment holds one live session; when it's busy the coordinator returns `429 no available capacity`. The SDK collapses this into `disconnected` + a transient error, so a naive UI reads "broken" exactly when the pod is just busy. `StatusBadge` detects the capacity message in `lastError`, shows a dedicated "At capacity — retrying…" state, and **auto-retries with backoff** (a crashed/zombie session frees the pod in ~1–2 minutes). Don't ever surface raw 429s as plain `disconnected`.
+- **A 429 is CAPACITY, not a disconnect.** The deployment holds one live session; when it's busy the API returns `429 no available capacity`. The SDK collapses this into `disconnected` + a transient error, so a naive UI reads "broken" exactly when the pod is just busy. `StatusBadge` detects the capacity message in `lastError`, shows a dedicated "At capacity — retrying…" state, and **auto-retries with backoff** (a crashed/zombie session frees the pod in ~1–2 minutes). Don't ever surface raw 429s as plain `disconnected`.
 - **Generation resolution ≠ delivery resolution.** The model generates at 832×480; the delivery stage upscales to the picked tier (e.g. `1080p / 2k / 4k`). The resolution picker changes the delivered raster, NOT what the model invents. The `SessionOptions` panel says this out loud.
 - **THE HERO — prompts are PER-CHUNK, and CONFIRM the morph.** `set_prompt` mid-run morphs the scene at the next chunk boundary. Observable confirmation is a first-class need, not a nicety — a morph that doesn't visibly land in one chunk reads as "didn't work". `EvolveScene` shows a pending state until `prompt_accepted` lands; `NowPlaying` stamps "morphed @ chunk N". Don't just assert the morph fired; let the client verify it.
 - **Command lifecycles differ.** Get these right or your UI lies:
@@ -86,45 +86,50 @@ if (status !== "ready" || !snapshot?.started) return null;
 
 The `status === "ready"` half matters — without it, your component shows stale data from the previous session after a disconnect/reconnect.
 
-## Auth — `getJwt` resolver + cacheable GET route
+## Auth — no-store route + a resolver that memoizes
 
-Two pieces work together: `app/api/reactor/token/route.ts` mints (and caches) a session-scoped JWT server-side, and `<ViskoOrbisStableProvider getJwt={fetchToken}>` calls it on every Coordinator HTTP hop.
+Two pieces work together: `app/api/reactor/token/route.ts` mints a session-scoped JWT server-side, and `<ViskoOrbisStableProvider jwtToken={fetchToken}>` hands the SDK a resolver it calls on every Reactor API hop.
 
-### `getJwt`, not `jwtToken`
+### `jwtToken` takes a resolver
 
-`@reactor-team/js-sdk` ≥ 2.10.1 accepts a **resolver** anywhere it used to take a static string. The provider re-invokes it on every Coordinator HTTP call — uploads, clip manifests, ICE refresh, SDP renegotiation — so a token aging out mid-session can't 401 those hops. The legacy `jwtToken="..."` static string caches one value at construction and breaks the moment it expires.
+`jwtToken` accepts a `JwtSource` — a static string or a function returning `Promise<string>`. Pass the resolver. The SDK re-invokes it on uploads, clip manifests, ICE refresh, and SDP renegotiation, so a token aging out mid-session can't 401 those hops; a static string caches one value at construction and breaks the moment it expires.
 
-The provider auto-stabilizes the resolver via `useRef + useMemo`, so the inline arrow form is safe — a parent re-render does **not** tear the session down. Do not wrap it in `useCallback`.
+The provider stabilizes the resolver internally, so the inline arrow form is safe — a parent re-render does **not** tear the session down. Do not wrap it in `useCallback`.
+
+### The token must stay stable for a session's whole life
+
+This is the rule everything else follows from. Reactor binds a session to the exact token that created it: a scoped token may act only on sessions it created itself. Hand a later hop a freshly minted JWT and it answers
+
+```
+403 this token is session-scoped and is not authorized for this resource
+```
+
+So the resolver has to return the *same* token across every hop of one session. It does that by memoizing in module scope, in `app/ViskoOrbisStableApp.tsx`: a `cachedToken` holding the JWT and its expiry, a one-minute refresh skew, and an `inflightToken` promise that coalesces the parallel hops the SDK fires at connect time into a single mint.
+
+**Do not delegate that to the browser's HTTP cache.** It looks equivalent and is not: the cache may drop an entry whenever it likes (DevTools "Disable cache", ordinary eviction, a shared proxy), and the refetch that follows mints a token with no sessions bound to it — so the session that was working 403s on its next upload. This is why the route answers `Cache-Control: private, no-store` and the client fetches with `cache: "no-store"`.
 
 ### The route — `app/api/reactor/token/route.ts`
 
 Already implemented. Why it's shaped this way, so you don't break it:
 
-1. **GET, not POST.** Browsers don't cache POST. The handler still POSTs to `/tokens` internally; the public route is GET so the browser's HTTP cache serves repeat calls transparently.
-2. **`Cache-Control: private`.** JWTs are per-user; never `public`.
-3. **`max-age` from the server's `expires_at`**, never hardcoded — it always tracks what the server granted.
-4. **`authorization_details` scopes the token** to `reactor/visko-orbis-stable` with a bounded `max_sessions` budget. The browser's token can only create sessions for this model and act on sessions it created — a leaked token is a bounded loss, not an account key.
+1. **Returns `{ jwt, expires_at }`.** `expires_at` is Unix seconds and comes from the server, which caps the lifetime it grants. Read it back rather than decoding the JWT in the browser; it is what lets the client memoize for exactly the real lifetime.
+2. **`Cache-Control: private, no-store`.** The client owns the caching, in memory. `private` additionally keeps shared caches (CDNs, corporate proxies) from ever storing a per-user JWT.
+3. **`authorization_details` scopes the token** to `reactor/visko-orbis-stable` with a bounded `max_sessions` budget. The browser's token can only create sessions for this model and act on sessions it created — a leaked token is a bounded loss, not an account key. Match the model by the account-qualified name the provider connects with; a scope that misses it mints fine and then 403s on `connect()`.
+4. **The `REACTOR_API_KEY` never leaves the server.** The route reads it; the browser only ever holds the minted JWT.
 
-Because it's GET + cacheable, the resolver is dumb on the wire — 99% of calls come back from the browser cache without touching your server.
+That shape is the only auth model this example documents. Keep the key server-side and the resolver stable, and don't reach for a third-party identity provider here — a refreshed identity token has the opposite lifetime rule from a session-scoped one, and swapping one in breaks the binding above.
 
-### Wiring an identity-provider JWT instead (Clerk, Auth0, …)
-
-`getJwt` is _the_ hook for short-TTL identity JWTs:
-
-```tsx
-<ViskoOrbisStableProvider
-  getJwt={async () => (await getToken({ template: "reactor" })) ?? ""}
->
-```
-
-Returning `""` suppresses the `Authorization` header. `getJwt` wins over `jwtToken` when both are passed.
+**One edge this does not cover:** a session created moments before the memoized token expires is orphaned at the next refresh, because the fresh token isn't bound to it. If you hit it, re-mint with `authorization_details.resources.sessions.bind` naming that session's id so the new token inherits authorization for it.
 
 ### autoConnect
 
 Initialization is **without** `autoConnect` — the user clicks Connect to see the transitions (important here because `waiting` is minutes and must be labelled). For a polished product:
 
 ```tsx
-<ViskoOrbisStableProvider getJwt={fetchToken} connectOptions={{ autoConnect: true }}>
+<ViskoOrbisStableProvider
+  jwtToken={fetchToken}
+  connectOptions={{ autoConnect: true }}
+>
 ```
 
 Keep the honest `waiting` / `priming` labels if you do — sessions don't reach `ready` instantly.
@@ -187,15 +192,26 @@ const resolutions = Array.isArray(snapshot.available_resolutions)
 
 The example does this everywhere it reads the snapshot. Do the same in new components.
 
-### 3.0 acks (post-launch): wait for the reply, not the broadcast
+### Acks arrive on the awaited call, not on a listener
 
-> **This example teaches fire-and-listen acks today, and that pattern goes away in 3.0.**
+A command's confirmation is **addressed**: the runtime sends each per-command ack — `prompt_accepted`, `image_accepted`, `resolution_accepted`, `audio_enabled_accepted`, `generation_paused` / `_resumed` — to the one connection whose command earned it, correlated by request id. So the awaited call *is* the ack:
 
-Right now (on `@reactor-team/js-sdk ^2.12.0` + the vendored `@2.0.1` package) the model's per-command confirmations — `prompt_accepted`, `image_accepted`, `resolution_accepted`, `audio_enabled_accepted`, `generation_paused`/`_resumed` — broadcast as `message` events, and this example drives off them (the morph-pending state, the "morphed @ chunk N" stamp, the I2V `image_accepted` gate).
+```tsx
+// ✅ tied to this call, and resolution means the handler finished
+await sendSetPrompt(s, prompt);
 
-On `@reactor-team/js-sdk ^3.0.0`, the model's runtime returns each command's acknowledgement as the correlated **reply to the awaited `sendCommand(...)` call**, delivered to the calling connection only — it does **not** broadcast. Listeners on those acks still compile, but the handler simply never fires again. The `state`, `chunk_complete`, `generation_started`, `generation_reset`, and `command_error` broadcasts are unchanged (the model still publishes those to every connection). The wire envelope stays `{ type, data }` throughout.
+// ⚠️ never fires for these acks — they are replies, not broadcasts
+useViskoPromptAccepted(() => setMorphPending(false));
+```
 
-When you migrate: move ack-confirmation logic into the call site (`const reply = await model.setPrompt(...)` — the typed 3.0 wrappers resolve with the reply), and shrink your `onMessage` listener to the messages that genuinely remain broadcasts. Nothing else in this example's architecture changes.
+A listener on an ack still compiles and simply never runs, which is why `EvolveScene` and `NowPlaying` carry an explicit "INTENTIONAL SILENCE" comment where one would otherwise look missing. Drive the morph-pending state, the "morphed @ chunk N" stamp, and the I2V gate off the awaits, as the example already does.
+
+What genuinely broadcasts to every connection is `state`, `chunk_complete`, `generation_started`, `generation_reset`, and `command_error`. That split is the rule for multi-client work: anything every client must agree on has to broadcast, and the `state` snapshot is what that is for. Never build shared UI state out of a command's reply.
+
+Two corollaries worth holding on to:
+
+- **Awaiting a command that answers with nothing is still a barrier.** The runtime acknowledges every correlated command once its handler has run, so a resolved await means the model is done. Delete any sleep that existed to "give the model time".
+- **Commands never reject.** A refused command resolves `undefined` and the reason arrives as a `command_error` broadcast, so `try/catch` is not how you detect failure — test the resolved value.
 
 ## Sending events — the typed methods
 
@@ -402,7 +418,21 @@ Render only the short `title` as the button label, `line-clamp-2` over the dim `
 
 ## Capturing clips
 
-Recording is base-SDK and model-agnostic — the same `SnapClip.tsx` ships unchanged across every example. `requestClip(seconds)` asks for the trailing N seconds, `<ClipPlayer>` previews, `<ClipDownloadButton>` saves an MP4. Import from `@reactor-team/js-sdk` (the one place that's idiomatic, not a smell). See the existing `SnapClip.tsx` — no `getJwt` plumbing needed; the clip components inherit the resolver from the provider via React context. (`hls.js` is the optional peer that keeps preview working off Safari.)
+Recording is base-SDK and model-agnostic — the same `SnapClip.tsx` ships across every example. `requestClip(seconds)` asks for the trailing N seconds, `<ClipPlayer>` previews it, `<ClipDownloadButton>` saves an MP4.
+
+This is the **one place** in the app where importing from `@reactor-team/js-sdk` directly is idiomatic rather than a smell. The typed package carries `requestClip` and `downloadClipAsFile` on its hook, but deliberately re-exports none of the components or `RecordingError`, because none of them depend on model identity. The rule for anything else you add: if it needs this model's events, messages, or commands, it comes from the typed package; if the same code would work against any model, the base SDK is fine.
+
+The shape, in five parts:
+
+1. Gate on `status !== "ready"` and return `null`, so the panel self-hides with the session and needs no phase awareness — it sits at the bottom of the sidebar.
+2. Read `requestClip` off `useReactor((s) => s.requestClip)`. `useReactor` works inside the typed provider because that provider wraps `<ReactorProvider>` internally.
+3. Catch `RecordingError` and surface `code` / `reason` inline. Its typed reasons are `DISCONNECTED`, `RECORDER_DISABLED`, `INVALID_DURATION`, and `REQUEST_TIMEOUT`.
+4. Compose the modal from `<ClipPlayer>` and `<ClipDownloadButton>`, both of which take `onError` / `onSuccess`. They operate on a `Clip` value alone, so the modal survives a disconnect.
+5. No `getJwt` plumbing — the clip components inherit the resolver from the provider through React context. The exception is a portal rendered outside the provider subtree (a toast in `app/layout.tsx`), where you capture the resolver with `reactor.getJwtResolver()` at action time and thread it down.
+
+`hls.js` is a direct dependency, not a peer: `<ClipPlayer>` plays HLS natively on Safari and dynamically imports `hls.js` everywhere else. Without it the preview surfaces an inline error and downloads still work.
+
+For a whole session rather than a trailing window, `reactor.requestRecording()` is the counterpart, and `useClipDownload` is the headless hook if you want your own download UI. Either way, **clip URLs are short-lived** — a few minutes. The downloaded file is the artifact; the URL is not something to share or persist.
 
 ## Brand alignment — design tokens, not components
 
