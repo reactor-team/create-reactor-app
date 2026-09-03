@@ -6,45 +6,37 @@ import { NextResponse } from "next/server";
 const MODEL_NAME = "reactor/visko-orbis-stable";
 
 // Session budget for one token — how many sessions it may ever create
-// (closed sessions still count). A token is cached and REUSED for its whole
-// lifetime (see below), so leave room for a burst of reconnects.
+// (closed sessions still count). The client reuses one token for its whole
+// lifetime, so leave room for a burst of reconnects.
 const MAX_SESSIONS = 10;
 
 // How long we ask Reactor to make the JWT valid for (the server caps
-// this at 6h). One hour keeps a cached token — and its remaining session
+// this at 6h). One hour keeps a memoized token — and its remaining session
 // budget — from outliving a normal visit.
 const TOKEN_LIFETIME_SECONDS = 60 * 60;
 
-// Safety margin on the cache lifetime so an in-flight request doesn't
-// race with the real expiry.
-const CACHE_SKEW_SECONDS = 60;
-
-// Mint a session-scoped Reactor JWT and return it with a `Cache-Control` header
-// that lets the browser REUSE the same token for its whole lifetime.
+// Mint a session-scoped Reactor JWT and return it together with its
+// `expires_at`, so the client can memoize it for exactly its lifetime.
 //
-// ⚠️ Reuse is REQUIRED, not just a cache optimization. The Coordinator binds
-// each session to the exact token (JWT id) that created it: a scoped token may
-// only act on sessions it created ITSELF. If the browser re-mints a fresh JWT
-// between the create call and a follow-up (GET session, ICE servers, DELETE),
-// the new token did not "create" that session and is rejected:
+// ⚠️ Reuse is REQUIRED, not just an optimization. Reactor binds each session
+// to the exact token that created it: a scoped token may only act on sessions
+// it created ITSELF. If a fresh JWT is minted between the create call and a
+// follow-up (GET session, ICE servers, DELETE), the new token did not
+// "create" that session and is rejected:
 //   403 "this token is session-scoped and is not authorized for this resource"
-// So the `getJwt` resolver in the client MUST yield the SAME token across every
-// coordinator hop of one session. Returning `private, max-age=<token lifetime>`
-// makes the browser's HTTP cache serve the identical JWT on every call —
-// no localStorage, no JWT parsing in client code, and the JTI stays constant.
-// (Do NOT switch this to no-store: that re-mints per hop and breaks the binding.)
+// So the resolver in the client MUST yield the SAME token across every hop of
+// one session. It does that by memoizing in module scope — see fetchToken in
+// ViskoOrbisStableApp — which is why this response is `no-store`. The browser
+// HTTP cache cannot make that promise: it can drop an entry at any time
+// (DevTools "Disable cache", eviction, a shared proxy), and a
+// dropped-then-refetched token has no sessions bound to it.
 //
 // Why GET and not POST?
-//   POST responses aren't cached by browsers. GET lets the HTTP cache serve
-//   repeat calls transparently. The route still POSTs to Reactor internally.
+//   Nothing about the request varies, and a GET reads as the lookup it is.
+//   The route handler still POSTs to Reactor internally.
 //
 // Why `private`?
 //   Keeps shared caches (CDNs, corporate proxies) from storing a per-user JWT.
-//
-// Why derive `max-age` from `expires_at`?
-//   Reactor decides the actual token lifetime (capped server-side). Reading
-//   `expires_at` keeps the cache window in sync with what was granted, minus
-//   a one-minute safety skew.
 //
 // Why `authorization_details`?
 //   This is what downscopes the token. Without it the JWT carries the
@@ -90,14 +82,13 @@ export async function GET() {
     expires_at: number;
   };
 
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const maxAge = Math.max(0, expires_at - nowSeconds - CACHE_SKEW_SECONDS);
-
+  // `expires_at` (unix seconds, decided by the server) lets the client
+  // memoize the token for exactly its real lifetime.
   return NextResponse.json(
-    { jwt },
+    { jwt, expires_at },
     {
       headers: {
-        "Cache-Control": `private, max-age=${maxAge}`,
+        "Cache-Control": "private, no-store",
       },
     },
   );
