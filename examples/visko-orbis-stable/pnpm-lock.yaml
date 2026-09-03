@@ -17,6 +17,9 @@ importers:
       '@reactor-team/ui':
         specifier: ^1.4.1
         version: 1.4.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      hls.js:
+        specifier: ^1.6.0
+        version: 1.7.1
       next:
         specifier: ^15.5.0
         version: 15.5.24(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

@@ -20,6 +20,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      hls.js:
+        specifier: ^1.6.0
+        version: 1.7.1
       next:
         specifier: 15.5.9
         version: 15.5.9(@babel/core@7.29.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
