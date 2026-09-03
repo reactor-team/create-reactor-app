@@ -51,7 +51,7 @@ A real-time session is a state machine, and the UI mirrors it with **two visible
 | **Setup** | not generating (fresh page, post-reset) | Quick Start example cards · custom scene card · Start button with its blocker reason                       |
 | **Live**  | `isGenerating === true`                 | WASD pad + joystick · mouse-look · jump/crouch · hold-key world events · prompt inspector · Advanced knobs |
 
-Unlike the sibling examples (which split every phase into its own sidebar component), this app centralizes input handling in one component — [`LingbotWorldController.tsx`](../components/lingbot-world-2/LingbotWorldController.tsx) — because _every_ control feeds the same three output channels (movement actions, camera pose, composed prompt) and they must stay coherent. The controller returns `{ sidebar, controls }` and the page lays them out.
+Unlike the sibling templates (which split every phase into its own sidebar component), this app centralizes input handling in one component — [`LingbotWorldController.tsx`](../components/lingbot-world-2/LingbotWorldController.tsx) — because _every_ control feeds the same three output channels (movement actions, camera pose, composed prompt) and they must stay coherent. The controller returns `{ sidebar, controls }` and the page lays them out.
 
 **When you add a new control, decide which channel it feeds first:**
 

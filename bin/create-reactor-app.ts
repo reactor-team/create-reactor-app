@@ -14,7 +14,7 @@ import {
 const REPO_OWNER = "reactor-team";
 const REPO_NAME = "create-reactor-app";
 const REPO_URL = `github.com/${REPO_OWNER}/${REPO_NAME}.git`;
-const EXAMPLES_PATH = "examples";
+const TEMPLATES_PATH = "templates";
 
 function getAuthenticatedRepoUrl(token: string): string {
   return `https://${token}@${REPO_URL}`;
@@ -28,7 +28,7 @@ async function fetchTemplates(token?: string): Promise<string[] | null> {
     }
 
     const res = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${EXAMPLES_PATH}`,
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${TEMPLATES_PATH}`,
       { headers }
     );
 
@@ -264,8 +264,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const examplesDir = path.join(dest, EXAMPLES_PATH);
-  const templateDir = path.join(examplesDir, template);
+  const templatesDir = path.join(dest, TEMPLATES_PATH);
+  const templateDir = path.join(templatesDir, template);
 
   if (!fs.existsSync(templateDir)) {
     console.error(chalk.red(`Template "${template}" not found.`));

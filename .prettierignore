@@ -3,4 +3,4 @@ dist
 node_modules
 
 # The templates are standalone apps, each formatted to its own conventions.
-examples
+templates

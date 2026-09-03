@@ -1,7 +1,7 @@
 # Agent instructions for create-reactor-app
 
 This repository holds two things: the `create-reactor-app` CLI in `bin/`, and
-the templates it scaffolds in `examples/`. Everything here is public-facing —
+the templates it scaffolds in `templates/`. Everything here is public-facing —
 readers copy these templates verbatim into their own products.
 
 ## Contribution policy
@@ -12,11 +12,11 @@ branch as publishing.
 
 ## How the CLI finds a template
 
-`bin/create-reactor-app.ts` lists `examples/` through the GitHub Contents API,
+`bin/create-reactor-app.ts` lists `templates/` through the GitHub Contents API,
 shallow-clones this repository, moves the chosen folder's contents up to the
 destination, and deletes the rest. Two consequences worth holding on to:
 
-- **A folder name in `examples/` is a public identifier**, the `--model <name>`
+- **A folder name in `templates/` is a public identifier**, the `--model <name>`
   a reader types. Renaming one breaks that command for everyone. `MODEL_MAP` in
   `bin/lib.ts` exists for the case where a public model name has to differ from
   its folder; it is empty because every name currently maps 1:1.
@@ -27,7 +27,7 @@ destination, and deletes the rest. Two consequences worth holding on to:
 
 Templates are deliberately excluded from the npm tarball (`files` in
 `package.json`) — they are ~30 MB, which is why the CLI fetches them by clone.
-`.prettierignore` skips `examples/` too, because each template is formatted to
+`.prettierignore` skips `templates/` too, because each template is formatted to
 its own conventions rather than the CLI's.
 
 ## Rules for a template
@@ -77,7 +77,7 @@ before adding a folder. The rules that matter most often:
 pnpm install && pnpm build && pnpm test && pnpm format:check
 
 # a template (tsc --noEmit runs inside next build)
-cd examples/<model> && pnpm install && pnpm build
+cd templates/<model> && pnpm install && pnpm build
 ```
 
 Static checks miss the things these templates exist to demonstrate, so also run

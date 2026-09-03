@@ -1,7 +1,7 @@
 "use client";
 
 // Featured worlds as sidebar quick-prompts (the "Try a prompt" pattern the
-// other Reactor examples use), grouped by experience mode. Each tile
+// other Reactor templates use), grouped by experience mode. Each tile
 // resolves to a WorldIntent: attach when the world has a pinned pre-built id
 // (instant), otherwise create from its prompt (~30s build).
 

@@ -1,17 +1,17 @@
-# API model examples
+# API model templates
 
 One runnable Next.js app per model Reactor serves on the API. Each folder is a
 self-contained project: clone it, add an API key, and it runs. Each also carries a
 `skill/SKILL.md` — an agent skill that captures the design decisions, the gotchas,
-and the patterns for growing the example into a product.
+and the patterns for growing the template into a product.
 
 These are the templates the CLI in this repo scaffolds from, so **a folder name
 here is a public identifier**: `npx create-reactor-app my-app --model=<folder>`.
 Renaming one breaks that command.
 
-## The examples
+## The templates
 
-| Example                                 | Typed SDK                                                                                          | What it demonstrates                                                                                                                                                                                                                                                                                |
+| Template                                | Typed SDK                                                                                          | What it demonstrates                                                                                                                                                                                                                                                                                |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`happy-oyster/`](./happy-oyster)       | [`@reactor-models/happy-oyster`](https://www.npmjs.com/package/@reactor-models/happy-oyster)       | Interactive world model. Build a world from a prompt (or attach a permanent one), then travel it live: **Adventure** worlds you drive with WASD, **Directing** worlds you steer with text `instruct` plus pause/rewind. Mode-fixed sessions, authoritative `world_state` snapshot.                  |
 | [`helios/`](./helios)                   | [`@reactor-models/helios`](https://www.npmjs.com/package/@reactor-models/helios)                   | Continuous prompt-driven video. Curated text and image scenes, mid-stream prompt hot-swap, atomic `setConditioning({ prompt, image })` for image-to-video, clip capture, design tokens from `@reactor-team/ui`.                                                                                     |
@@ -31,7 +31,7 @@ Each folder is a standalone pnpm project and does **not** join a workspace, so
 copying it out works exactly the way the scaffolding CLI does:
 
 ```bash
-cd examples/helios
+cd templates/helios
 cp .env.example .env.local
 # add REACTOR_API_KEY=rk_...
 
@@ -41,14 +41,14 @@ pnpm dev
 
 API keys come from [reactor.inc/account/api-keys](https://www.reactor.inc/account/api-keys).
 
-## How auth works in every example
+## How auth works in every template
 
-The same shape everywhere, and the only shape these examples document:
+The same shape everywhere, and the only shape these templates document:
 
 - The `rk_` **API key stays server-side**. It is read by
   `app/api/reactor/token/route.ts` and never sent to the browser.
 - That route mints a **short-lived, session-scoped JWT** via Reactor's `/tokens`
-  endpoint, pinned to the example's model through `authorization_details` with a
+  endpoint, pinned to the template's model through `authorization_details` with a
   bounded session budget. The JWT is the only credential the browser holds, and it
   can only operate sessions it created itself.
 - The client hands a **resolver** to `<ModelProvider jwtToken={fetchToken}>`. The
@@ -63,7 +63,7 @@ Each `skill/SKILL.md` explains the failure mode if you break that last rule.
 
 ## What changed with `@reactor-team/js-sdk` 3.x
 
-Every example targets 3.x. One behavioural change matters more than the rest, and
+Every template targets 3.x. One behavioural change matters more than the rest, and
 no part of getting it wrong is a compile error:
 
 **A command's result belongs on the awaited call, not on a subscription.** When a

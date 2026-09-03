@@ -10,7 +10,7 @@
 // The typed client comes from the published `@reactor-models/x2`
 // package. It bakes the model name and tracks into <X2Provider> and
 // exposes typed commands and per-message hooks, so the app reads the
-// same as the sibling examples:
+// same as the sibling templates:
 //
 //   <X2Provider jwtToken={fetchToken} />     — session lifecycle
 //   useX2()                                  — status + typed commands

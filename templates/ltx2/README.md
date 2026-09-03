@@ -177,7 +177,7 @@ hand-rolled message switch.
 | `app/lib/presets.ts`             | The public demo's cast, cut to three: script, voice prompt, pace, pinned seed             |
 | `app/components/Stage.tsx`       | The `<video>` carrying both tracks, TTFF measurement, the stall watch, status line        |
 | `app/components/Transport.tsx`   | Start / Pause / Resume / Stop / Reset, gated by `validCommands()`                         |
-| `app/components/SnapClip.tsx`    | Clip capture + download. Copied unchanged from the sibling examples                       |
+| `app/components/SnapClip.tsx`    | Clip capture + download. Copied unchanged from the sibling templates                       |
 | `app/components/ui/`             | Shared primitives (`Panel`, `Button`, `Icon`) — the same module every example uses        |
 | `app/components/TakePanel.tsx`   | The six conditions and their `queued` chips. Holds no pending-edit state                  |
 | `app/components/PresetRail.tsx`  | The persona rows; each click is a real command sequence                                   |
@@ -196,7 +196,7 @@ neither fails nor times out, which is the unhelpful part — there is nothing to
 surface as an error.
 
 The panel ships anyway, because recording is base-SDK surface
-(`SnapClip.tsx` is copied unchanged from the sibling examples and imports only
+(`SnapClip.tsx` is copied unchanged from the sibling templates and imports only
 `@reactor-team/js-sdk`), so when the deployment starts producing clips this
 works with no client change. Verified still broken on 2026-08-09.
 

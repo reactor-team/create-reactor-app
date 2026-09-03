@@ -54,7 +54,7 @@ npx create-reactor-app my-app --model=helios --token ghp_xxxxxxxxxxxx
 
 ### Available Models
 
-Templates live in [`examples/`](./examples) in this repository — one runnable Next.js app per model Reactor serves on the API. By default the model name maps 1:1 to a folder of the same name (e.g. `--model=helios` clones the `examples/helios/` folder), so **a folder name there is a public identifier** and renaming one breaks the CLI.
+Templates live in [`templates/`](./templates) in this repository — one runnable Next.js app per model Reactor serves on the API. By default the model name maps 1:1 to a folder of the same name (e.g. `--model=helios` clones the `templates/helios/` folder), so **a folder name there is a public identifier** and renaming one breaks the CLI.
 
 The CLI also supports an optional alias map (`MODEL_MAP` in `bin/create-reactor-app.ts`) for cases where the public model name needs to differ from the folder name. It is empty by default — add an entry only when you want a name → folder rename.
 
@@ -75,9 +75,9 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to see your application running. Make sure to setup your API keys first!
 
-## Examples
+## Templates
 
-Every template lives in [`examples/`](./examples), which has its own README covering what each one demonstrates, the auth model they all share, and the one behaviour of `@reactor-team/js-sdk` 3.x that is easy to get wrong. Each folder also carries a `skill/SKILL.md` written for someone extending it.
+Every template lives in [`templates/`](./templates), which has its own README covering what each one demonstrates, the auth model they all share, and the one behaviour of `@reactor-team/js-sdk` 3.x that is easy to get wrong. Each folder also carries a `skill/SKILL.md` written for someone extending it.
 
 The CLI resolves templates from this repository's **default branch**, not from the installed package, so a template fix reaches users as soon as it merges — no release required. A change to the CLI itself still needs a release.
 
@@ -135,7 +135,7 @@ re-running a release is always safe.
 ## Support
 
 - 📖 [Documentation](https://docs.reactor.inc)
-- 💻 [Templates](./examples)
+- 💻 [Templates](./templates)
 - 🐛 [Report Issues](https://github.com/reactor-team/create-reactor-app/issues)
 
 ---

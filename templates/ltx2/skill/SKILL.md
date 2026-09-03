@@ -510,7 +510,7 @@ clip never materializes: the playlist is polled indefinitely and the request
 neither fails nor times out.
 
 The save button ships anyway. `SnapClip.tsx` is copied unchanged from the
-sibling examples and rendered in the sidebar as the **Capture** panel; it is
+sibling templates and rendered in the sidebar as the **Capture** panel; it is
 base-SDK surface that imports only `@reactor-team/js-sdk` and needs no
 model-specific code, so the day the deployment produces clips it works with no
 client change. Don't read the dead button as a missing feature and don't
