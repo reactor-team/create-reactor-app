@@ -20,6 +20,7 @@ import { Gallery } from "./Gallery";
 import { CustomCompose, AttachById } from "./Composer";
 import { AdventureControls } from "./AdventureControls";
 import { DirectingControls } from "./DirectingControls";
+import { SnapClip } from "./SnapClip";
 import { ModeBadge, SectionLabel, Spinner, WorldIdChip } from "./ui";
 
 export function Sidebar({ session }: { session: WorldSession }) {
@@ -48,6 +49,8 @@ export function Sidebar({ session }: { session: WorldSession }) {
       {view.kind !== "browse" &&
         view.kind !== "traveling" &&
         session.seedFrame && <SeedFrameCard src={session.seedFrame} />}
+      {/* Gates itself on the connection, so it needs no view of its own. */}
+      <SnapClip />
     </aside>
   );
 }

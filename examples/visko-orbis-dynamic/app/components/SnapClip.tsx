@@ -25,7 +25,7 @@ import {
 // a new model example.
 //
 // `<ClipPlayer>` and `<ClipDownloadButton>` auto-inherit the JWT
-// resolver from `<FastH3Provider jwtToken={…} />` via React context, so
+// resolver from `<ViskoOrbisDynamicProvider jwtToken={…} />` via React context, so
 // no `getJwt` prop is needed here. The one case where you would still
 // pass it explicitly is when the clip UI renders through a portal
 // outside the provider subtree (e.g. a Sonner toast living in

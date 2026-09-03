@@ -9,6 +9,7 @@ import { PromptComposer } from "./components/PromptComposer";
 import { ImageStarter } from "./components/ImageStarter";
 import { SessionOptions } from "./components/SessionOptions";
 import { AudioPanel } from "./components/AudioPanel";
+import { SnapClip } from "./components/SnapClip";
 import { Video } from "./components/Video";
 
 // Hand a `jwtToken` resolver to the Provider — the SDK re-invokes it on every
@@ -118,6 +119,7 @@ export function ViskoOrbisDynamicApp() {
             <ImageStarter />
             <SessionOptions />
             <AudioPanel />
+            <SnapClip />
           </aside>
           <section className="order-first flex-1 lg:order-none">
             <Video />
