@@ -5,9 +5,9 @@ self-contained project: clone it, add an API key, and it runs. Each also carries
 `skill/SKILL.md` — an agent skill that captures the design decisions, the gotchas,
 and the patterns for growing the example into a product.
 
-These moved here from `reactor-team/js-sdk`, which is being wound down. They are
-the templates `npx create-reactor-app` scaffolds from, and the CLI will be
-repointed at this folder.
+These are the templates the CLI in this repo scaffolds from, so **a folder name
+here is a public identifier**: `npx create-reactor-app my-app --model=<folder>`.
+Renaming one breaks that command.
 
 ## The examples
 
@@ -21,6 +21,9 @@ repointed at this folder.
 | [`ltx2/`](./ltx2)                       | [`@reactor-models/ltx2`](https://www.npmjs.com/package/@reactor-models/ltx2)                       | Streaming **talking-head avatar**. Upload a face and a script; the model generates voice and lip-synced video together and streams both. The take in flight is frozen while the session stays editable — mid-run edits queue for the next take. Server-authoritative `valid_commands`, TTFF timing. |
 | [`sana-streaming/`](./sana-streaming)   | [`@reactor-models/sana-streaming`](https://www.npmjs.com/package/@reactor-models/sana-streaming)   | Streaming **video-to-video editor**. Live webcam transform via a manual `camera` publish, file-clip editing with side-by-side compare, mid-stream re-prompting, seed control.                                                                                                                       |
 | [`x2/`](./x2)                           | [`@reactor-models/x2`](https://www.npmjs.com/package/@reactor-models/x2)                           | Streaming **video-to-video editor** on XMAX X2. Webcam, file-clip or still-image sources on one `source` track, side-by-side compare, reference-image conditioning, drag-to-steer pointer on the output, keep-backlog toggle.                                                                       |
+| [`fast-h3/`](./fast-h3) | [`@reactor-models/fast-h3`](https://www.npmjs.com/package/@reactor-models/fast-h3) | Queued clip generation with an explicit player. Compose a multi-scene episode by hand or from a writer prompt, then watch chained clips play as one continuous video. Teaches the queue contract and the hard-cut prompting rule that keeps chained scenes from degrading. |
+| [`visko-orbis-stable/`](./visko-orbis-stable) | [`@reactor-models/visko-orbis-stable`](https://www.npmjs.com/package/@reactor-models/visko-orbis-stable) | Continuous steerable video. The hero is the **mid-flight morph**: `setPrompt` during a run reshapes the picture at the next chunk boundary instead of cutting. Explicit `setImage` → `setPrompt` → `start` chain for image-to-video, plus resolution, seed, and audio knobs rendered from the state snapshot. |
+| [`visko-orbis-dynamic/`](./visko-orbis-dynamic) | [`@reactor-models/visko-orbis-dynamic`](https://www.npmjs.com/package/@reactor-models/visko-orbis-dynamic) | The companion model to Visko Orbis Stable, same shape and same mid-flight morph. Its delivery-resolution list also offers `native`, which ships the model's own geometry instead of upscaling. |
 
 ## Running one
 
@@ -28,7 +31,7 @@ Each folder is a standalone pnpm project and does **not** join a workspace, so
 copying it out works exactly the way the scaffolding CLI does:
 
 ```bash
-cd examples/api-models-examples/helios
+cd examples/helios
 cp .env.example .env.local
 # add REACTOR_API_KEY=rk_...
 
@@ -105,7 +108,8 @@ client code:
 
 | Models | A refused command… |
 | --- | --- |
-| `helios`, `lingbot`, `lingbot-world-2`, `longlive-v2`, `ltx2`, `sana-streaming` | resolves the call `undefined` and broadcasts `command_error` to every connection. Surface that hook. |
+| `fast-h3`, `helios`, `lingbot`, `lingbot-world-2`, `longlive-v2`, `ltx2`, `sana-streaming`, `visko-orbis-stable`, `visko-orbis-dynamic` | resolves the call `undefined` and broadcasts `command_error` to every connection. Surface that hook. |
+| `happy-oyster` | declares no `command_error`. It broadcasts its own `action_error` instead, typed as `ActionErrorMessage`. |
 | `x2` | declares no `command_error` at all from its 1.0.0 release, so there is no hook. The refusal is the command's own error reply, which the SDK records on `lastError` and raises on the `error` event. |
 
 A refusal is never the awaited value, so `undefined` — not a message with an

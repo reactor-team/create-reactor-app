@@ -54,7 +54,7 @@ Plus the model's ancillary surface, deliberate and small: **resolution** (a pick
   - Resolution/seed/audio are **start-time** settings; change them before `start`, not mid-run.
   - A non-16:9 reference image squashes to 832×480 with no crop.
 - **Add an audio prompt later on purpose** only if you've measured it. The example leaves `set_audio_prompt` unset on purpose (feeding a scene description makes audio worse than omitting it).
-- **Acks are the awaited call, not a listener (js-sdk 3.0.0+).** Per-command confirmations that exist on this wire (on dynamic that means **`prompt_accepted` and `image_accepted`**, generation pause/resume — NOT `resolution_accepted` or `audio_enabled_accepted`, which don't exist on dynamic) are the correlated reply the **awaited** `sendCommand(...)` resolves with, delivered to the calling connection only. `state` / `chunk_complete` / `generation_started` / `generation_complete` / `command_error` still do broadcast. So `await sendSetPrompt(s, p)` resolving IS the ack — don't listen for it.
+- **Acks are the awaited call, not a listener (js-sdk 3.0.0+).** Every per-command confirmation on this wire — `prompt_accepted`, `image_accepted`, `resolution_accepted`, `audio_enabled_accepted`, and generation pause/resume — is the correlated reply the **awaited** call resolves with, delivered to the calling connection only. The typed methods carry that in their signatures: `setResolution()` resolves with `ResolutionAcceptedMessage | undefined`. `state` / `chunk_complete` / `generation_started` / `generation_complete` / `command_error` still do broadcast. So `await sendSetPrompt(s, p)` resolving IS the ack — don't listen for it.
 
 ## Talking to the model
 
@@ -76,4 +76,4 @@ commands belongs on the typed package instead.
 
 ## Sibling example
 
-This is one of a paired launch: a second dev example for **`reactor/visko-orbis-stable`** lives at [`../visko-orbis-stable`](../visko-orbis-stable). Same Next.js + js-sdk 3.0.0 shape and the same ancillary surface — its `AudioPanel` has the same generate-sound toggle (`set_audio_enabled`) and its SessionOptions the same `available_resolutions` picker (stable's list is named delivery tiers; dynamic's also offers `native`). The remaining difference is the prompt pipeline: dynamic has no structured-caption echo message, so stable's "Painting" caption line has no dynamic counterpart.
+**Visko Orbis Stable** is the companion model, with its own template at [`../visko-orbis-stable`](../visko-orbis-stable). Same Next.js and typed-SDK shape, and the same ancillary surface: a generate-sound toggle on `set_audio_enabled` and a resolution picker rendered from `available_resolutions` (stable offers named delivery tiers; dynamic's list also carries `native`). The one real difference is the prompt pipeline — dynamic has no structured-caption echo message, so stable's caption line has no counterpart there.
