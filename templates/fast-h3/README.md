@@ -51,6 +51,16 @@ Get an API key at
 - **Snap a clip.** Capture the last 10 seconds of the live stream as an
   MP4 download.
 
+## Looking for the livestream version?
+
+This template is the **canonical single-app starting point**: one browser
+session, private to you. Its sibling,
+[`../fast-h3-livestream`](../fast-h3-livestream), is a different product
+shape — a **24/7 broadcast channel**: a Python streamer drives the same model
+into a LiveKit room, viewers watch a shared stream on a web app, and their chat
+pitches the episodes. The CLI scaffolds one folder per project, so
+`--model=fast-h3-livestream` gives you the channel instead.
+
 ## Code tour
 
 | File                                                                       | Owns                                                                                                           |

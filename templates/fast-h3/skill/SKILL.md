@@ -1,6 +1,6 @@
 ---
 name: fast-h3
-description: Extend the FastH3 Episodes starter — a Next.js app on @reactor-models/fast-h3 that composes multi-scene episodes and plays them as one continuous video via chained clips. Covers the model's queue contract, the hard-cut prompting rule that keeps chained scenes from degrading, the auth pattern, the state-snapshot pattern, capacity/error handling, and every model knob deliberately not shipped.
+description: Extend the FastH3 Episodes starter — a Next.js app on @reactor-models/fast-h3 that composes multi-scene episodes and plays them as one continuous video via chained clips. Covers the model's queue contract, the hard-cut prompting rule that keeps chained scenes from degrading, the auth pattern, the state-snapshot pattern, capacity/error handling, and every model knob deliberately not shipped. For the multi-viewer broadcast version of fast-h3, see ../../fast-h3-livestream instead.
 ---
 
 # Extending FastH3 Episodes
@@ -8,6 +8,22 @@ description: Extend the FastH3 Episodes starter — a Next.js app on @reactor-mo
 You've cloned this folder and want to build on it. This guide carries the
 model's contract, the app's patterns, and the prompting rules that keep the
 output looking right — so your change lands without re-learning any of it.
+
+## Which fast-h3 template am I in?
+
+Two templates build on this model, with different product shapes:
+
+|                      | **`fast-h3` (this app)**                              | [`fast-h3-livestream`](../../fast-h3-livestream)                     |
+| -------------------- | ----------------------------------------------------- | -------------------------------------------------------------------- |
+| Shape                | One browser session, private to the person running it | A 24/7 broadcast channel many viewers watch together                 |
+| Parts                | One Next.js app on the typed SDK                      | A Python streamer publishing into a LiveKit room, plus a Next.js viewer |
+| Who drives the model | The browser, directly                                 | The streamer; viewers only chat                                      |
+| Episode source       | The composer UI (AI writer or by hand)                | Viewer chat ideas, plus a default scene rotation                     |
+
+`create-reactor-app` scaffolds **one folder per project** — `--model=fast-h3`
+gives you this app, `--model=fast-h3-livestream` the channel. Both skills
+document the same model contract; this one owns the browser patterns, that one
+owns the streamer and room patterns.
 
 ## The model in three sentences
 

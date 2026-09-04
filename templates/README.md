@@ -1,9 +1,14 @@
 # API model templates
 
-One runnable Next.js app per model Reactor serves on the API. Each folder is a
-self-contained project: clone it, add an API key, and it runs. Each also carries a
-`skill/SKILL.md` — an agent skill that captures the design decisions, the gotchas,
-and the patterns for growing the template into a product.
+One runnable reference frontend per model Reactor serves on the API. Each
+folder is a self-contained project: clone it, add an API key, and it runs. Each
+also carries a `skill/SKILL.md` — an agent skill that captures the design
+decisions, the gotchas, and the patterns for growing the template into a
+product.
+
+All but one are a single Next.js app. `fast-h3-livestream` runs as two parts, a
+Python streamer beside a Next.js viewer, and sets up per part rather than from
+the root.
 
 These are the templates the CLI in this repo scaffolds from, so **a folder name
 here is a public identifier**: `npx create-reactor-app my-app --model=<folder>`.
@@ -24,11 +29,12 @@ Renaming one breaks that command.
 | [`fast-h3/`](./fast-h3) | [`@reactor-models/fast-h3`](https://www.npmjs.com/package/@reactor-models/fast-h3) | Queued clip generation with an explicit player. Compose a multi-scene episode by hand or from a writer prompt, then watch chained clips play as one continuous video. Teaches the queue contract and the hard-cut prompting rule that keeps chained scenes from degrading. |
 | [`visko-orbis-stable/`](./visko-orbis-stable) | [`@reactor-models/visko-orbis-stable`](https://www.npmjs.com/package/@reactor-models/visko-orbis-stable) | Continuous steerable video. The hero is the **mid-flight morph**: `setPrompt` during a run reshapes the picture at the next chunk boundary instead of cutting. Explicit `setImage` → `setPrompt` → `start` chain for image-to-video, plus resolution, seed, and audio knobs rendered from the state snapshot. |
 | [`visko-orbis-dynamic/`](./visko-orbis-dynamic) | [`@reactor-models/visko-orbis-dynamic`](https://www.npmjs.com/package/@reactor-models/visko-orbis-dynamic) | The companion model to Visko Orbis Stable, same shape and same mid-flight morph. Its delivery-resolution list also offers `native`, which ships the model's own geometry instead of upscaling. |
+| [`fast-h3-livestream/`](./fast-h3-livestream) | [`@reactor-models/fast-h3`](https://www.npmjs.com/package/@reactor-models/fast-h3) (in the streamer, via the Python SDK) | The same model as a **24/7 broadcast channel** rather than a private session. A Python streamer drives the model and publishes into a LiveKit room; a Next.js viewer watches the shared stream and its chat pitches the episodes. Two parts, so it sets up per part — see its README. |
 
 ## Running one
 
-Each folder is a standalone pnpm project and does **not** join a workspace, so
-copying it out works exactly the way the scaffolding CLI does:
+Each single-app folder is a standalone pnpm project and does **not** join a
+workspace, so copying it out works exactly the way the scaffolding CLI does:
 
 ```bash
 cd templates/helios
@@ -41,9 +47,14 @@ pnpm dev
 
 API keys come from [reactor.inc/account/api-keys](https://www.reactor.inc/account/api-keys).
 
-## How auth works in every template
+`fast-h3-livestream` is the exception: `streamer/` and `viewer/` install and run
+separately, and the CLI skips the root install for it because there is no root
+manifest to install. Its README carries both halves.
 
-The same shape everywhere, and the only shape these templates document:
+## How auth works in the browser templates
+
+The same shape in every template whose browser drives the model, and the only
+shape those templates document:
 
 - The `rk_` **API key stays server-side**. It is read by
   `app/api/reactor/token/route.ts` and never sent to the browser.
@@ -59,11 +70,19 @@ The same shape everywhere, and the only shape these templates document:
   only operate the sessions it created, so every hop of one session must present
   the same JWT, and a browser HTTP cache cannot promise that.
 
+`fast-h3-livestream` is shaped differently because its browser does not drive
+the model. The Reactor key lives with the **streamer**, which holds the session
+server-side; the viewer only joins a LiveKit room, and its token route mints a
+LiveKit token rather than a Reactor JWT. The rule that carries over is the one
+that matters: the `rk_` key never reaches a browser.
+
 Each `skill/SKILL.md` explains the failure mode if you break that last rule.
 
 ## What changed with `@reactor-team/js-sdk` 3.x
 
-Every template targets 3.x. One behavioural change matters more than the rest, and
+Every template whose browser drives the model targets 3.x (`fast-h3-livestream`'s
+viewer speaks LiveKit and no Reactor SDK at all; its streamer uses the Python
+`reactor-sdk`). One behavioural change matters more than the rest, and
 no part of getting it wrong is a compile error:
 
 **A command's result belongs on the awaited call, not on a subscription.** When a
@@ -122,5 +141,8 @@ error-ish shape — is what a call site tests for.
   folder, generated from the model's published schema.
 - One model per folder. The folder name is the model identifier the scaffolding
   CLI takes as `--model <name>`.
+- One project per folder, installed from the root. `fast-h3-livestream` is the
+  one exception and says so in its README; a template that needs a second part
+  is a deliberate decision, not the default.
 - Read a folder's `skill/SKILL.md` before changing it. It is where the reasoning
   behind the code lives.

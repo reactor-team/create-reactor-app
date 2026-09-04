@@ -67,6 +67,13 @@ before adding a folder. The rules that matter most often:
   of `ClipPlayer`, `ClipDownloadButton`, or `RecordingError`. The test for
   anything else: if it needs this model's events, messages, or commands, it
   belongs on the typed package.
+- **A template may run as more than one part.** The standard assumes one
+  Next.js app, and `fast-h3-livestream` is the deliberate exception: a Python
+  streamer beside a Next.js viewer, with no root manifest. The CLI detects that
+  (no root `package.json`), skips the install, and points at the README instead,
+  so such a template owns its own setup instructions per part. Everything above
+  that is about the client — auth, awaited replies, the typed package — still
+  applies to whichever part talks to Reactor.
 - **Templates keep their own design system.** Copies of a shared component are
   expected to differ in styling; they must not differ in behaviour.
 
