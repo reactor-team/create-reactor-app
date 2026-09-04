@@ -287,21 +287,30 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(chalk.yellow("\nInstalling dependencies...\n"));
+  // Most templates are one npm project, so the scaffold installs for you. A
+  // template that runs as several parts (a streamer beside a viewer, say) has
+  // no root manifest and no single install — its README owns the setup.
+  const isSingleProject = fs.existsSync(path.join(dest, "package.json"));
 
-  try {
-    execSync("pnpm install", { cwd: dest, stdio: "inherit" });
-  } catch {
-    console.error(chalk.red(`\n❌ "pnpm install" failed in ${dest}.`));
-    console.log(
-      chalk.white(
-        `\nThe project was scaffolded, but dependencies did not install.`
-      )
-    );
-    console.log(chalk.white(`Review the error above, then retry manually:\n`));
-    console.log(chalk.white(`  cd ${projectName}`));
-    console.log(chalk.white(`  pnpm install\n`));
-    process.exit(1);
+  if (isSingleProject) {
+    console.log(chalk.yellow("\nInstalling dependencies...\n"));
+
+    try {
+      execSync("pnpm install", { cwd: dest, stdio: "inherit" });
+    } catch {
+      console.error(chalk.red(`\n❌ "pnpm install" failed in ${dest}.`));
+      console.log(
+        chalk.white(
+          `\nThe project was scaffolded, but dependencies did not install.`
+        )
+      );
+      console.log(
+        chalk.white(`Review the error above, then retry manually:\n`)
+      );
+      console.log(chalk.white(`  cd ${projectName}`));
+      console.log(chalk.white(`  pnpm install\n`));
+      process.exit(1);
+    }
   }
 
   console.log(
@@ -311,9 +320,14 @@ async function main(): Promise<void> {
   );
   console.log(chalk.cyan("Next steps:"));
   console.log(chalk.white(`  cd ${projectName}`));
-  console.log(chalk.white(`  cp .env.example .env.local`));
-  console.log(chalk.white(`  # Add your API keys to .env.local`));
-  console.log(chalk.white(`  pnpm dev\n`));
+  if (isSingleProject) {
+    console.log(chalk.white(`  cp .env.example .env.local`));
+    console.log(chalk.white(`  # Add your API keys to .env.local`));
+    console.log(chalk.white(`  pnpm dev\n`));
+  } else {
+    console.log(chalk.white(`  # This template runs as more than one part.`));
+    console.log(chalk.white(`  # README.md has the setup for each one.\n`));
+  }
   console.log(chalk.cyan("Learn more:"));
   console.log(chalk.white(`  Docs:    https://docs.reactor.inc/overview`));
   console.log(chalk.white(`  Discord: https://discord.gg/xSbBWECQRk\n`));
