@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@reactor-models/happy-oyster':
-        specifier: ^1.0.0
-        version: 1.0.0(@tensorflow/tfjs-core@4.22.0)(react@19.2.3)(seedrandom@3.0.5)
+        specifier: ^1.0.1
+        version: 1.0.1(@tensorflow/tfjs-core@4.22.0)(react@19.2.3)(seedrandom@3.0.5)
       '@reactor-team/js-sdk':
         specifier: ^3.0.0
         version: 3.0.0(react@19.2.3)
@@ -508,8 +508,8 @@ packages:
   '@open-draft/until@2.1.0':
     resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
 
-  '@reactor-models/happy-oyster@1.0.0':
-    resolution: {integrity: sha512-XFkwQAfCXlOcWFY5p8A6Gr8FE+NZIhmW+gMIJw+wf2KEyfePEkCEA/fZNZJGLC+kRbAvfNotFn459Hz4R1S49w==}
+  '@reactor-models/happy-oyster@1.0.1':
+    resolution: {integrity: sha512-8gy51CSsoXQQkw+ZL/TxOoD+BQ78ZmP2+vUnfaYcw+211aMbIMbwWhIrFW3K9gS4Q1oE8NKmUj6QAcBuFEGzAg==}
     peerDependencies:
       react: '>=18'
     peerDependenciesMeta:
@@ -2762,7 +2762,7 @@ snapshots:
 
   '@open-draft/until@2.1.0': {}
 
-  '@reactor-models/happy-oyster@1.0.0(@tensorflow/tfjs-core@4.22.0)(react@19.2.3)(seedrandom@3.0.5)':
+  '@reactor-models/happy-oyster@1.0.1(@tensorflow/tfjs-core@4.22.0)(react@19.2.3)(seedrandom@3.0.5)':
     dependencies:
       '@reactor-team/js-sdk': 3.0.0(react@19.2.3)
       aliyun-rtc-sdk: 7.3.3(@tensorflow/tfjs-core@4.22.0)(seedrandom@3.0.5)

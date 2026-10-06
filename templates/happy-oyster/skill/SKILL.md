@@ -96,7 +96,7 @@ The example creates its own Reactor session: the client's `connect()` calls `ho.
 | ------------------------------ | ----------------------------- | --------------------------------------------- |
 | Build failed                   | `worldState.phase==="failed"` | Offer "try another prompt". Worlds are cheap. |
 | First-frame content policy     | action error `403005`         | Return to the composer with the message.      |
-| Stale / not-yours pinned world | action error `403001`         | Fall back to the create path.                 |
+| Stale / not-yours pinned world | action error `403001`         | Show its message, drop the saved id, and fall back to the create path. Ids saved before HappyOyster's deployment move fail this way. |
 | Attaching the wrong experience | action error `MODE_MISMATCH`  | Attach through the world's own mode instead.  |
 | Session drop                   | `phase === "ended"`           | Leave the travel view; no reconnect here.     |
 
