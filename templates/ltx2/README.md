@@ -65,10 +65,10 @@ The app defaults to `https://api.reactor.inc`; override with
 ever sees a short-lived JWT minted by `app/api/reactor/token/route.ts` (see
 [docs.reactor.inc/authentication](https://docs.reactor.inc/authentication)).
 
-**Preset portraits are not committed.** Faces are a licensing and consent
-question, so the preset rows show a monogram until you add your own; see
-[`public/presets/README.md`](public/presets/README.md). Everything else works
-without them — upload a face in the take panel and press Start.
+Preset portraits ship in [`public/presets/`](public/presets/), one `<id>.jpg`
+per preset. If one is missing its row falls back to the preset's monogram and
+applies everything except the image — upload a face in the take panel and
+press Start.
 
 ## The one thing to understand: the take is frozen, the session is not
 
