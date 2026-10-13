@@ -44,8 +44,8 @@ export function PresetRail({
 /**
  * Probe the portrait client-side rather than relying on `<img onError>`: an
  * SSR'd img can fail before hydration, in which case the error event fires
- * before React is listening and the fallback never renders. Portraits are not
- * committed to this repo — see public/presets/README.md.
+ * before React is listening and the fallback never renders. The fallback is
+ * the preset's monogram, shown when public/presets/ has no matching file.
  */
 function usePortraitOk(src: string): boolean {
   const [ok, setOk] = useState(false);
