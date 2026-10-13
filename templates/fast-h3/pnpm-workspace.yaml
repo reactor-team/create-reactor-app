@@ -3,7 +3,7 @@
 packages: []
 
 allowBuilds:
-  sharp: true
+  sharp: false
 
 minimumReleaseAgeExclude:
   - "@reactor-models/fast-h3@1.0.2"

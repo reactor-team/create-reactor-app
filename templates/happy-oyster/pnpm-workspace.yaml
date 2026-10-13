@@ -4,5 +4,5 @@ packages: []
 
 allowBuilds:
   core-js: false
-  msw: true
-  sharp: true
+  msw: false
+  sharp: false
