@@ -112,15 +112,66 @@ What the streamer relies on:
 - **`queue_update`** mirrors both queues in full. The streamer derives
   everything from this mirror and its metadata echoes — it keeps no local
   scheduling state a restart could lose.
-- **`command_error`** is broadcast when a command is refused; the refused
-  command answers with an empty reply. The streamer treats "reply without
-  `clip`" as a refusal.
+- **A refused command fails its own call** with a stable code and a reason
+  (see [Refusals](#refusals-read-them-off-the-call)). Nothing changed on the
+  model's side.
 
 The metadata echo is the correlation channel: the director writes
 `{episode_id, title, scene, scenes, author, default}` at enqueue time and
 reconstructs "now playing scene 2/3 of _X_ by _Y_" from a `clip_started`
 alone. Anything you add downstream (an overlay, a rundown panel) should
 read the echo the same way, never client-side state.
+
+## Refusals: read them off the call
+
+The model refuses a command by failing that command's request with a `code`
+and a reason. `reactor_sdk`'s `send_command()` raises it on that call as a
+`ReactorError` with `operation == "send_command"`, `code` set to the
+model's code, and a message of the form
+`command 'enqueue' failed (queue_full): <reason>`. `ReactorLink.send_command`
+turns that into `CommandRefused(command, code, reason)`:
+
+```python
+try:
+    reply = await link.send_command("enqueue", payload)
+except CommandRefused as refusal:
+    if refusal.code == "unknown_clip":  # the source clip is gone
+        ...
+```
+
+Why build on the call rather than a message listener:
+
+- **The caller learns on its own call**, so the streamer never has to guess
+  which of its commands a refusal belongs to.
+- **Only the caller is told.** Another client in the same session never
+  sees a refusal of a command it did not send.
+- **The code is stable.** The director branches on it: `unknown_clip` on a
+  chained enqueue drops the continuation, and `empty_prompt`,
+  `prompt_too_long`, `invalid_request`, or `invalid_image` give up at once
+  because a retry cannot fix them.
+
+Two more rules `ReactorLink.send_command` encodes:
+
+- A command with a declared reply (`enqueue` → `clip_queued`, `pop` →
+  `clip_popped`) that comes back bodyless is still a refusal, raised with a
+  generic reason. A model release that reports refusals another way answers
+  like that. Pass `expects_reply=False` for `play` and `stop`, which declare
+  no reply.
+- Any other failure (the session dropped mid-command) returns `None`, and
+  the caller retries once the session is back.
+
+| Command      | Reply             | Codes it can fail with                                                                               |
+| ------------ | ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `enqueue`    | `clip_queued`     | `empty_prompt`, `prompt_too_long`, `queue_full`, `invalid_request`, `unknown_clip`, `invalid_image`  |
+| `play`       | none              | `already_playing`, `clip_not_ready`, `unknown_clip`, `no_ready_clip`                                 |
+| `stop`       | none              | `not_playing`                                                                                        |
+| `pop`        | `clip_popped`     | `unknown_clip`, `clip_referenced`                                                                    |
+| `move`       | `clip_moved`      | `unknown_clip`                                                                                       |
+| `set_canvas` | `canvas_accepted` | `session_not_empty`, `invalid_aspect`                                                                |
+
+Do not listen for a `command_error` message to learn about refusals: the
+refusal belongs to the call, and that message reaches every client in the
+session.
 
 ## Scene chaining, and the rule that keeps it watchable
 
@@ -167,7 +218,7 @@ Two structural choices reinforce the rule:
   prompts. Letting the LLM pick counts made shapes drift; a fixed shape
   keeps queue math predictable.
 - **A broken chain degrades, never stalls.** A chained enqueue refused
-  twice (a reconnect loses the source clip server-side) drops the
+  `unknown_clip` (a reconnect loses the source clip server-side) drops the
   continuation and retries the scene standalone — the prompts are
   self-contained cuts, so only the seamless handover is lost.
 
@@ -180,7 +231,7 @@ viewer, never stall_:
 | --------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Model unreachable / at session capacity | Viewer sees "offline / waiting for the streamer"; the room holds the last frame | `reactor_link.run` retries forever on a fixed delay; the pacer and publisher never restart                       |
 | Generation queue full for a new episode | Chat: "the show's queue is at capacity — '…' was dropped"                       | Pops waiting default scenes first (`default: true` only); drops the idea only when episode scenes fill the queue |
-| One scene's enqueue refused             | Chat: "the queue refused scene N of '…'"                                        | Bounded retries (3), chain dropped after 2, then the rest of the episode is dropped                              |
+| One scene's enqueue refused             | Chat: "the queue refused scene N of '…'"                                        | Gives up at once on a code a retry cannot fix; otherwise bounded retries (3), the chain dropped on `unknown_clip` or after 2, then the rest of the episode is dropped |
 | A scene's render fails                  | Chat: "scene N of '…' failed to render"                                         | The model's queue moves on by itself; chained scenes waiting on the failed one fail with it                      |
 | Idea backlog full                       | Chat: "the idea backlog is full right now"                                      | The pending queue is bounded (8); refusal is instant and visible                                                 |
 
@@ -251,7 +302,10 @@ rather than overloading `show.chat`.
    `send_video`). The broadcast stutters for every viewer at once.
 7. **Trusting chat input.** Truncate and sanitize both ends; prompts are
    hard-capped at 800 chars server-side either way.
-8. **Two writers on the model's queue.** The director's lock is the only
+8. **Reading refusals from a `command_error` listener**, or treating every
+   empty reply as a lost session. Catch `CommandRefused` on the call and
+   branch on its `code`.
+9. **Two writers on the model's queue.** The director's lock is the only
    serialization; a second enqueue path interleaves episodes.
 
 ## Checklist for a change

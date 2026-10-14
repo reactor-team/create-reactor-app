@@ -23,10 +23,12 @@ The rules that keep it coherent:
     an opaque string the model echoes back untouched on every message that
     references the clip. That echo is how the director narrates playback
     and recognizes its own default scenes, with no local joins to lose.
-  * A chained enqueue refused twice (a reconnect loses the source clip
-    server-side) degrades to a standalone scene rather than stalling — the
-    scene prompts are self-contained cuts, so only the seamless handover is
-    lost, never the episode.
+  * A refused command fails its own call with the model's code, raised as
+    `CommandRefused`. The director branches on the code: a chained enqueue
+    refused `unknown_clip` (a reconnect loses the source clip server-side)
+    degrades to a standalone scene rather than stalling — the scene prompts
+    are self-contained cuts, so only the seamless handover is lost, never
+    the episode. A request the model can never accept is not retried.
 """
 
 from __future__ import annotations
@@ -36,7 +38,7 @@ import json
 import logging
 
 from publisher import LiveKitPublisher
-from reactor_link import ReactorLink
+from reactor_link import CommandRefused, ReactorLink
 from upsampler import Episode, Upsampler, sanitize
 
 logger = logging.getLogger(__name__)
@@ -47,6 +49,11 @@ _PENDING_LIMIT = 8
 
 # Enqueue retry cadence while the model refuses (reconnect mid-command, ...).
 _RETRY_DELAY_S = 3.0
+
+# Refusal codes a retry cannot fix: the request itself is wrong.
+_FINAL_REFUSALS = frozenset(
+    {"empty_prompt", "prompt_too_long", "invalid_request", "invalid_image"}
+)
 
 # How often the default rotation re-checks whether the queue wants topping up.
 _IDLE_POLL_S = 3.0
@@ -136,14 +143,18 @@ class Director:
                 ensure_ascii=False,
             )
             async with self._enqueue_lock:
-                await self._link.send_command(
-                    "enqueue",
-                    {
-                        "prompt": sanitize(prompt),
-                        "metadata": metadata,
-                        "seconds": self._clamped_seconds(),
-                    },
-                )
+                try:
+                    await self._link.send_command(
+                        "enqueue",
+                        {
+                            "prompt": sanitize(prompt),
+                            "metadata": metadata,
+                            "seconds": self._clamped_seconds(),
+                        },
+                    )
+                except CommandRefused:
+                    # The link logged the code; the next poll tries again.
+                    pass
 
     # ---------------------------------------------------------- enqueueing
 
@@ -177,7 +188,11 @@ class Director:
                 break
             if not _is_default(clip):
                 continue
-            reply = await self._link.send_command("pop", {"clip_id": clip["clip_id"]})
+            try:
+                reply = await self._link.send_command("pop", {"clip_id": clip["clip_id"]})
+            except CommandRefused:
+                # `unknown_clip`: it started building or playing meanwhile.
+                continue
             if isinstance(reply, dict) and "clip" in reply:
                 free += 1
                 logger.info(
@@ -255,15 +270,29 @@ class Director:
     ) -> str | None:
         """Enqueue one scene with bounded retries; returns its clip id.
 
-        A bodyless reply means the model refused the command (the link
-        logged the broadcast `command_error`) or the session dropped
-        mid-command. A refused *chained* enqueue drops the continuation
-        after two strikes and retries standalone; a third refusal gives up
-        so one bad scene cannot wedge the idea worker.
+        A refusal arrives on this call as `CommandRefused`, with the model's
+        code; None means the session dropped mid-command. A chained enqueue
+        refused `unknown_clip` drops the continuation and retries
+        standalone. A request the model can never accept gives up at once,
+        and a third failure of any kind gives up so one bad scene cannot
+        wedge the idea worker.
         """
-        refusals = 0
-        while refusals < 3:
-            reply = await self._link.send_command("enqueue", payload)
+        failures = 0
+        while failures < 3:
+            try:
+                reply = await self._link.send_command("enqueue", payload)
+            except CommandRefused as refusal:
+                if refusal.code in _FINAL_REFUSALS:
+                    return None
+                if refusal.code == "unknown_clip" and "continue_from_clip_id" in payload:
+                    del payload["continue_from_clip_id"]
+                    logger.warning(
+                        "[director] %s scene %d: the source clip is gone; "
+                        "retrying as a standalone cut",
+                        episode.episode_id, index,
+                    )
+                    continue
+                reply = None
             if isinstance(reply, dict) and "clip" in reply:
                 clip = reply["clip"]
                 logger.info(
@@ -274,12 +303,14 @@ class Director:
                     if payload.get("continue_from_clip_id") else "",
                 )
                 return clip["clip_id"]
-            refusals += 1
-            if refusals == 2 and "continue_from_clip_id" in payload:
+            failures += 1
+            if failures == 2 and "continue_from_clip_id" in payload:
+                # A release that refuses without a code cannot say the source
+                # is gone, so two failures of a chained scene stand in for it.
                 del payload["continue_from_clip_id"]
                 logger.warning(
                     "[director] %s scene %d: dropping the continuation after "
-                    "2 refusals; retrying as a standalone cut",
+                    "2 failures; retrying as a standalone cut",
                     episode.episode_id, index,
                 )
             await asyncio.sleep(_RETRY_DELAY_S)

@@ -78,8 +78,8 @@ is idle.
 | Concept    | API                                                                          |
 | ---------- | ---------------------------------------------------------------------------- |
 | Connection | `useH3().status / connect / disconnect`                                      |
-| Commands   | `enqueue`, `play`, `stop`, `pop`, `move`, `reset`, `set*`, `get*`             |
-| Messages   | `state_update`, `queue_update`, `clip_*` lifecycle, `command_error`          |
+| Commands   | `enqueue`, `play`, `stop`, `pop`, `move`, `reset`, `set*`, `get*`, through `run()` |
+| Messages   | `state_update`, `queue_update`, `clip_*` lifecycle                           |
 | Tracks     | `main_video` with synchronized `main_audio`                                  |
 
 ## The reference contract
@@ -213,14 +213,75 @@ has.
 - **Await the reply.** A command's answer resolves the call. Do not subscribe
   to a hook to catch it — that hook fires for *any* call of that command, and
   never on a second client.
-- **Commands never reject.** A refusal resolves `undefined` and broadcasts
-  `command_error` with the command and reason. `try/catch` will not see it.
-  `CommandError` surfaces it.
+- **Read a refusal off the call.** See [Refusals](#refusals) below; every
+  command in this app goes through `run()`.
 - **A resolved await means the handler finished.** `play` and `stop` answer
   with no body, and that is still a barrier — delete any sleep meant to "give
   the model time".
-- `clip_failed` is different from `command_error`: the build started and then
-  failed. That clip is dropped and nothing retries on its own.
+- `clip_failed` is different from a refusal: the command was accepted, the
+  build started and then failed. That clip is dropped and nothing retries on
+  its own.
+
+## Refusals
+
+The model refuses a command by failing that command's own request with a
+stable `code` and a reason written for the person using the app. That is the
+thing to build on, for three reasons:
+
+- **The caller learns on its own call**, so nothing has to guess which
+  command a refusal belongs to.
+- **Only the caller is told.** A second tab or a viewer in the same session
+  never sees a refusal of a command it did not send.
+- **The code is stable.** Branch on `code`; show the reason.
+
+The SDK never rejects a command call. A refused call resolves `undefined`,
+and the failure arrives on the SDK's `error` event with
+`operation: "sendCommand"` and a message of the form
+`command 'enqueue' failed (queue_full): <reason>`. `try/catch` will not see
+it. `run()` in `app/lib/command.tsx` reads it off the call:
+
+```ts
+const { run } = useCommand();
+const outcome = await run("enqueue", () => enqueue({ prompt, reference_images: refs }));
+if (!outcome.ok) {
+  outcome.refusal.code; // "queue_full"
+  outcome.refusal.reason; // shown by <CommandError />
+  return;
+}
+outcome.reply?.clip.clip_id;
+```
+
+`run()` records the refusal for `<CommandError />`, and the next command that
+succeeds clears it. It also encodes three rules:
+
+- `undefined` from a command with a declared reply (`enqueue`, `pop`, `move`,
+  `set*`, `reset`) and no failure attached is still a refusal, shown as "The
+  model refused this command." A model release that reports refusals another
+  way resolves like that.
+- `play` and `stop` have no reply, so `undefined` is also success. Pass
+  `{ expectsReply: false }`; only a failure counts.
+- A refusal is not a connection problem. The SDK's `lastError` holds every
+  failure, refusals included, so `StatusBadge` reads `useSessionError()`,
+  which skips them.
+
+Do not learn about refusals from a `command_error` listener. The typed package
+still exports the hook, but the refusal belongs to the call, and that message
+reaches every client in the session.
+
+| Command            | Reply                  | Codes it can fail with                                                                                         |
+| ------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `enqueue`          | `clip_queued`          | `empty_prompt`, `metadata_too_long`, `queue_full`, `invalid_request`, `invalid_image`, `invalid_audio`, `session_changed` |
+| `play`             | none                   | `already_playing`, `no_ready_clip`                                                                             |
+| `stop`             | none                   | `not_playing`                                                                                                  |
+| `pop`              | `clip_popped`          | `unknown_clip`                                                                                                 |
+| `move`             | `clip_moved`           | `invalid_position`, `unknown_clip`                                                                             |
+| `set_clip_seconds` | `clip_length_accepted` | `invalid_seconds`                                                                                              |
+| `set_seed`         | `seed_accepted`        | `invalid_seed`                                                                                                 |
+| `set_canvas`       | `canvas_accepted`      | `session_not_empty`, `invalid_aspect`                                                                          |
+
+`set_autoplay`, `set_flush_on_clip_end`, `reset`, `get_state`, and `get_queue`
+do not refuse. A failure that never reached the model (no session yet) comes
+back through `run()` too, with an SDK code such as `INVALID_STATE`.
 
 ## What is intentionally not exposed
 
@@ -235,8 +296,9 @@ has.
 ## Capturing clips
 
 `SnapClip` records the live session and is model-agnostic — it imports
-`@reactor-team/js-sdk` directly, which is idiomatic only here, because
-recording is a base-SDK feature the typed clients do not re-export. Drop the
+`@reactor-team/js-sdk` directly, which is idiomatic only here and in
+`app/lib/command.tsx`, because recording and command failures are base-SDK
+features the typed clients do not re-export. Drop the
 file into another template unchanged.
 
 ## Common mistakes when extending
@@ -257,13 +319,16 @@ file into another template unchanged.
 9. Treating `set_flush_on_clip_end` as continuation.
 10. Subscribing to a hook for a command's own answer instead of awaiting it.
 11. Building queue state from `clip_*` events instead of `queue_update`.
+12. Reading refusals from a `command_error` listener, or showing one through
+    `lastError` — a full queue then looks like a lost connection.
 
 ## Checklist for a change
 
 - `pnpm build` passes (it runs `tsc --noEmit`).
 - Any new state-holding component clears its snapshot when
   `status !== "ready"`.
-- New commands are awaited, and refusals surface through `command_error`.
+- New commands go through `run()` and are awaited; refusals surface in
+  `CommandError`, never in the connection status.
 - Anything touching references still sends one to nine, in order, through the
   right path for one versus many.
 - Run the app: connect, queue a multi-reference clip, play it, then disconnect

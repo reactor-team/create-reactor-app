@@ -42,3 +42,9 @@ The example pins `@reactor-models/fast-h3-omni@0.2.0`. Its provider, typed
 command methods, message hook, track hook, and video view are used in
 `app/Studio.tsx`. The typed package brings in the shared JS SDK transport;
 the app imports model-specific APIs only from the typed package.
+
+`app/lib/command.tsx` is the one model-agnostic piece, so it imports
+`@reactor-team/js-sdk` directly. Every command goes through its `run()`: a
+refused command fails the call that sent it, with the model's code and a
+reason the stage shows, and the connection status never reports it as a lost
+session.

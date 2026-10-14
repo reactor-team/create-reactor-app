@@ -9,7 +9,9 @@
   * the media path — the model's video and audio tracks feed the pacer;
   * a live mirror of the model's `state_update` / `queue_update`, so the
     rest of the streamer reads state instead of re-deriving it;
-  * a fan-out of every model message to registered listeners.
+  * a fan-out of every model message to registered listeners;
+  * command refusals — a refused command fails its own call, and
+    `send_command` raises it as `CommandRefused` with the model's code.
 
 The contract this speaks is the fast-h3 clip queue: `enqueue` replies
 `clip_queued`, builds cross into the playout queue on `clip_generated`, and
@@ -24,10 +26,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from collections.abc import Callable
 from typing import Any
 
-from reactor_sdk import Reactor, ReactorStatus
+from reactor_sdk import Reactor, ReactorError, ReactorStatus
 
 from config import Config
 from pacer import Pacer
@@ -56,6 +59,36 @@ _DEFAULT_STATE: dict[str, Any] = {
     "playout_queued": 0,
     "playout_capacity": 10,
 }
+
+
+# How the SDK words a command the model refused:
+# `command 'enqueue' failed (queue_full): The generation queue is full.`
+_COMMAND_FAILURE = re.compile(r"^command '([^']+)' failed \(([^)]*)\): (.*)$", re.DOTALL)
+
+GENERIC_REFUSAL = "The model refused this command."
+
+
+class CommandRefused(Exception):
+    """The model refused a command. Nothing changed on the model's side.
+
+    `code` is the model's stable code to branch on (`queue_full`,
+    `unknown_clip`, `empty_prompt`); `reason` is its explanation, written for
+    the person using the app.
+    """
+
+    def __init__(self, command: str, code: str, reason: str) -> None:
+        super().__init__(f"{command} refused ({code}): {reason}")
+        self.command = command
+        self.code = code
+        self.reason = reason
+
+
+def _refusal(command: str, error: ReactorError) -> CommandRefused | None:
+    """The refusal a failed `send_command` carries, or None for any other failure."""
+    match = _COMMAND_FAILURE.match(error.message)
+    if error.operation != "send_command" or match is None:
+        return None
+    return CommandRefused(command, match.group(2) or error.code, match.group(3))
 
 
 def payload(reply: Any) -> Any:
@@ -150,32 +183,50 @@ class ReactorLink:
         elif kind == "queue_update":
             self.generation_clips = data.get("generation", [])
             self.playout_clips = data.get("playout", [])
-        elif kind == "command_error":
-            logger.warning(
-                "[reactor] command refused: %s — %s",
-                data.get("command"), data.get("reason"),
-            )
         for listener in self._listeners:
             listener(kind, data)
 
     # ------------------------------------------------------------ commands
 
-    async def send_command(self, command: str, data: dict) -> Any:
-        """Send one command on the live session; None when disconnected.
+    async def send_command(
+        self, command: str, data: dict, *, expects_reply: bool = True
+    ) -> Any:
+        """Send one command on the live session and return its reply's data.
 
         Waits for a session to exist first, so callers ride out a reconnect
-        instead of failing. A None / bodyless reply means the model refused
-        the command (it broadcast `command_error` with the reason).
+        instead of failing. Returns None when the session dropped
+        mid-command; the caller may retry once it is back.
+
+        Raises `CommandRefused` when the model refused the command. The SDK
+        raises a `ReactorError` for it on this call, carrying the model's
+        code, so only this streamer hears about it. A command with a
+        declared reply (`enqueue`, `pop`) that comes back bodyless is a
+        refusal too: a model release that reports refusals another way
+        answers like that, so it raises with a generic reason. Pass
+        `expects_reply=False` for a command with no reply (`play`, `stop`).
         """
         await self._ready.wait()
         reactor = self._reactor
         if reactor is None:
             return None
         try:
-            return payload(await reactor.send_command(command, data))
+            reply = payload(await reactor.send_command(command, data))
+        except ReactorError as error:
+            refusal = _refusal(command, error)
+            if refusal is None:
+                logger.warning("[reactor] %s failed: %s", command, error)
+                return None
+            logger.warning(
+                "[reactor] %s refused (%s): %s", command, refusal.code, refusal.reason
+            )
+            raise refusal from error
         except Exception as error:
             logger.warning("[reactor] %s failed: %s", command, error)
             return None
+        if reply is None and expects_reply:
+            logger.warning("[reactor] %s refused: %s", command, GENERIC_REFUSAL)
+            raise CommandRefused(command, "refused", GENERIC_REFUSAL)
+        return reply
 
     # ----------------------------------------------------------- lifecycle
 

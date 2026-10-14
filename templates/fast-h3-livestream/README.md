@@ -70,7 +70,9 @@ episode is queued and again when it starts playing.
   which is what keeps a chain sharp (see the skill).
 - **See errors where viewers live.** Capacity limits, refused scenes, and
   failed renders are answered in the room chat by the author `show` —
-  never a silent failure.
+  never a silent failure. A refused command fails the streamer's own call
+  with the model's code, so the director knows which scene was refused and
+  why.
 - **Run it without an LLM key.** With no `OPENAI_API_KEY`, an idea becomes
   a single scene of its raw text and everything else works the same.
 
@@ -92,7 +94,7 @@ from its own server route — the LiveKit secret never reaches a browser.
 | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | [`streamer/main.py`](streamer/main.py)                                           | Wiring and task lifecycle; nothing else.                                                                     |
 | [`streamer/config.py`](streamer/config.py)                                       | The only reader of `.env` / environment.                                                                     |
-| [`streamer/reactor_link.py`](streamer/reactor_link.py)                           | Everything `reactor-sdk`: connect/reconnect loop, queue mirrors, command sending, media → pacer.             |
+| [`streamer/reactor_link.py`](streamer/reactor_link.py)                           | Everything `reactor-sdk`: connect/reconnect loop, queue mirrors, command sending (a refusal raises `CommandRefused` with the model's code), media → pacer. |
 | [`streamer/director.py`](streamer/director.py)                                   | Scheduling: ideas → episodes → chained enqueue; the default rotation; capacity handling; chat announcements. |
 | [`streamer/upsampler.py`](streamer/upsampler.py)                                 | The LLM call and the system prompt — including the hard-cut rules that keep chained scenes sharp.            |
 | [`streamer/pacer.py`](streamer/pacer.py)                                         | The 24 fps metronome between clip-shaped model output and the room's need for a frame every period, forever. |

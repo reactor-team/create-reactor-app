@@ -7,6 +7,7 @@ import {
   useFastH3StateUpdate,
   type FastH3StateUpdateMessage,
 } from "@reactor-models/fast-h3";
+import { useCommand } from "../lib/command";
 import { parseTag } from "../lib/tag";
 
 // Live-phase panel: what's on air (from the metadata echo on
@@ -16,6 +17,7 @@ import { parseTag } from "../lib/tag";
 // finished hands over with no cut.
 export function NowPlaying() {
   const { status, stop, setAutoplay } = useFastH3();
+  const { run } = useCommand();
   const [snapshot, setSnapshot] = useState<FastH3StateUpdateMessage | null>(
     null,
   );
@@ -51,7 +53,10 @@ export function NowPlaying() {
           <input
             type="checkbox"
             checked={snapshot.autoplay}
-            onChange={(e) => void setAutoplay({ enabled: e.target.checked })}
+            onChange={(e) => {
+              const enabled = e.target.checked;
+              void run("set_autoplay", () => setAutoplay({ enabled }));
+            }}
           />
           autoplay
         </label>
@@ -67,7 +72,7 @@ export function NowPlaying() {
       )}
       {snapshot.playing && (
         <button
-          onClick={() => void stop()}
+          onClick={() => void run("stop", stop, { expectsReply: false })}
           className="mt-2 rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300"
         >
           {snapshot.autoplay ? "Skip" : "Stop"}

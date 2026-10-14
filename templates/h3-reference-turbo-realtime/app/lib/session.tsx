@@ -11,6 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useCommand } from "./command";
 import { useH3, useH3ClipGenerated } from "./model";
 import { loadPresetFile, PRESETS } from "./presets";
 import {
@@ -74,6 +75,7 @@ const EMPTY_DRAFT = (mode: Mode): ShotDraft => ({
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const { status, connect, uploadFile, enqueue, setAutoplay } = useH3();
+  const { run } = useCommand();
 
   const [draft, setDraft] = useState<ShotDraft>(() =>
     EMPTY_DRAFT("one-subject"),
@@ -231,7 +233,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (status !== "ready") {
       setPhase("connecting");
       await connect();
-      await setAutoplay({ enabled: true });
+      await run("set_autoplay", () => setAutoplay({ enabled: true }));
     }
     setPhase("uploading");
     const refs: FileRef[] = [];
@@ -249,7 +251,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     setUploaded(next);
     return refs;
-  }, [connect, setAutoplay, status, uploadFile, uploaded]);
+  }, [connect, run, setAutoplay, status, uploadFile, uploaded]);
 
   const send = useCallback(
     async (
@@ -258,19 +260,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       opts: { continueFrom?: string } = {},
     ) => {
       const d = draftRef.current;
-      const reply = await enqueue({
-        prompt,
-        seconds: d.seconds,
-        ...(refs.length === 1
-          ? { reference_image: refs[0] }
-          : { reference_images: refs }),
-        ...(d.seed.trim() ? { seed: Number(d.seed) } : {}),
-        ...(opts.continueFrom
-          ? { continue_from_clip_id: opts.continueFrom }
-          : {}),
-      });
-      // A refusal resolves undefined; the reason arrives as command_error.
-      if (!reply) return null;
+      const outcome = await run("enqueue", () =>
+        enqueue({
+          prompt,
+          seconds: d.seconds,
+          ...(refs.length === 1
+            ? { reference_image: refs[0] }
+            : { reference_images: refs }),
+          ...(d.seed.trim() ? { seed: Number(d.seed) } : {}),
+          ...(opts.continueFrom
+            ? { continue_from_clip_id: opts.continueFrom }
+            : {}),
+        }),
+      );
+      // A refusal comes back on this call, with the model's code and reason;
+      // `run()` hands it to <CommandError />.
+      if (!outcome.ok || !outcome.reply) return null;
+      const reply = outcome.reply;
       setHasQueued(true);
       setLastAccepted({
         clipId: reply.clip.clip_id,
@@ -279,7 +285,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       });
       return reply.clip.clip_id;
     },
-    [enqueue],
+    [enqueue, run],
   );
 
   // The opening shot, and "play this scene" again once the session is running.

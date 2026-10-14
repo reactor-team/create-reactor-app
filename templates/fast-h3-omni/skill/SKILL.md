@@ -23,8 +23,8 @@ or play a ready clip, then render synchronized `main_video` and `main_audio`.
 | Concept | What the app needs |
 | --- | --- |
 | Connection | Connect only when a user queues work; disconnect ends this browser's session. |
-| Commands | Call `useFastH3Omni().enqueue`, `setAutoplay`, `play`, `stop`, and `reset`. The reply to a command belongs to the awaited call. |
-| Messages | `useFastH3OmniMessage` provides a discriminated message union. `state_update` and `queue_update` are full snapshots; `clip_generated`, `clip_failed`, and `command_error` are reactions and errors. |
+| Commands | Call `useFastH3Omni().enqueue`, `setAutoplay`, `play`, `stop`, and `reset` through `run()`. The reply, and a refusal, belong to the awaited call. |
+| Messages | `useFastH3OmniMessage` provides a discriminated message union. `state_update` and `queue_update` are full snapshots; `clip_generated` and `clip_failed` are reactions to builds. |
 | Tracks | `FastH3OmniMainVideoView` renders the 24 fps video; `useFastH3OmniTrack("main_audio")` provides synchronized 48 kHz audio. Verify audio separately. |
 
 ## UI phases
@@ -77,10 +77,60 @@ the authority on decoded media and the prompt's token count. The limits are:
 Upload after connecting with `useFastH3Omni().uploadFile`, in the order shown
 to the user, and pass the returned `FileRef` objects directly to `enqueue`.
 Each queued clip pins its own references; a
-later upload does not change it. When a command is refused, the awaited reply
-is absent and `command_error` carries the reason. A generation that started
-but failed emits `clip_failed` and is removed; do not silently retry a paid
-request.
+later upload does not change it. A refused command fails its own call (see
+[Refusals](#refusals)). A generation that started but failed emits
+`clip_failed` and is removed; do not silently retry a paid request.
+
+## Refusals
+
+The model refuses a command by failing that command's request with a stable
+`code` and a reason written for the person using the app. The caller learns
+on its own call, and only the caller is told: another client in the session
+never sees a refusal of a command it did not send. Branch on `code`; show the
+reason.
+
+The SDK never rejects a command call. A refused call resolves `undefined`,
+and the failure arrives on the SDK's `error` event with
+`operation: "sendCommand"` and a message of the form
+`command 'enqueue' failed (queue_full): <reason>`. `run()` in
+`app/lib/command.tsx` reads it off the call:
+
+```ts
+const { run } = useCommand();
+const queued = await run("enqueue", () => model.enqueue({ prompt, seconds }));
+if (!queued.ok) throw new Error(queued.refusal.reason); // code: queued.refusal.code
+```
+
+Three rules it encodes:
+
+- `undefined` from a command with a declared reply (`enqueue`, `set_*`,
+  `reset`, `pop`, `move`) and no failure attached is still a refusal, shown
+  as "The model refused this command." A model release that reports refusals
+  another way resolves like that.
+- `play` and `stop` have no reply, so `undefined` is also success. Pass
+  `{ expectsReply: false }`; only a failure counts.
+- A refusal is not a connection problem. The SDK's `lastError` holds every
+  failure, refusals included, so `Studio` reads `useSessionError()` for
+  connection failures and reports refusals from the call.
+
+`app/lib/command.tsx` is model-agnostic, which is why it imports
+`@reactor-team/js-sdk` directly. Do not learn about refusals from a
+`command_error` message: the refusal belongs to the call, and that message
+reaches every client in the session.
+
+| Command | Reply | Codes it can fail with |
+| --- | --- | --- |
+| `enqueue` | `clip_queued` | `empty_prompt`, `metadata_too_long`, `queue_full`, `invalid_request`, `invalid_image`, `invalid_audio`, `request_rejected` |
+| `play` | none | `already_playing`, `no_ready_clip` |
+| `stop` | none | `not_playing` |
+| `pop` | `clip_popped` | `unknown_clip` |
+| `move` | `clip_moved` | `invalid_position`, `unknown_clip` |
+| `set_clip_seconds` | `clip_length_accepted` | `invalid_seconds` |
+| `set_seed` | `seed_accepted` | `invalid_seed` |
+| `set_canvas` | `canvas_accepted` | `session_not_empty`, `invalid_aspect` |
+
+`set_autoplay`, `set_flush_on_clip_end`, `reset`, `get_state`, and
+`get_queue` do not refuse.
 
 ## Continuing a generated clip
 
@@ -127,7 +177,8 @@ helpers while keeping model-specific commands on the typed package.
 
 - Keep the auth route scoped, no-store, and matched to the typed provider's
   account-qualified model name.
-- Await command replies; show `command_error` and `clip_failed` distinctly.
+- Send commands through `run()` and await them; show refusals and
+  `clip_failed` distinctly, and keep both out of the connection status.
 - Clear state and queue snapshots on disconnect.
 - Verify image, audio, text-only, and continuation paths in a browser after a
   typed SDK or schema upgrade.

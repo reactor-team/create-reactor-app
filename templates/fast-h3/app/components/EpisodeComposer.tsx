@@ -12,6 +12,7 @@ import {
   EXAMPLE_EPISODE,
   MAX_SCENES,
 } from "../lib/prompts";
+import { useCommand } from "../lib/command";
 import { makeTag } from "../lib/tag";
 
 // The episode composer — this example's signature flow.
@@ -41,6 +42,7 @@ const MAX_PROMPT_CHARS = 800;
 
 export function EpisodeComposer() {
   const { status, connect, enqueue, setAutoplay, getState } = useFastH3();
+  const { run } = useCommand();
   const [snapshot, setSnapshot] = useState<FastH3StateUpdateMessage | null>(
     null,
   );
@@ -133,33 +135,44 @@ export function EpisodeComposer() {
         }
         // Autoplay makes the playout queue self-starting, and it is what
         // performs the seamless chained handover between an episode's scenes.
-        if (!state.autoplay) await setAutoplay({ enabled: true });
+        if (!state.autoplay) {
+          const autoplay = await run("set_autoplay", () =>
+            setAutoplay({ enabled: true }),
+          );
+          if (!autoplay.ok) throw new Error(autoplay.refusal.reason);
+        }
       }
 
       const episode = crypto.randomUUID().slice(0, 12);
       let previousClipId: string | undefined;
       for (const [index, prompt] of scenes.entries()) {
-        const reply = await enqueue({
-          prompt,
-          metadata: makeTag({
-            episode,
-            title,
-            scene: index + 1,
-            scenes: scenes.length,
+        const outcome = await run("enqueue", () =>
+          enqueue({
+            prompt,
+            metadata: makeTag({
+              episode,
+              title,
+              scene: index + 1,
+              scenes: scenes.length,
+            }),
+            // Scene 1 opens from text; every later scene opens on the
+            // previous scene's final frame. The scene prompts open on hard
+            // cuts, which is what keeps the chain from degrading.
+            ...(previousClipId
+              ? { continue_from_clip_id: previousClipId }
+              : {}),
           }),
-          // Scene 1 opens from text; every later scene opens on the
-          // previous scene's final frame. The scene prompts open on hard
-          // cuts, which is what keeps the chain from degrading.
-          ...(previousClipId ? { continue_from_clip_id: previousClipId } : {}),
-        });
-        if (!reply) {
-          // Refused — command_error above carries the model's reason.
+        );
+        // The refusal arrives on this call: `outcome.refusal.code` is the
+        // model's code (`queue_full`, `prompt_too_long`) and <CommandError />
+        // shows its reason.
+        if (!outcome.ok || !outcome.reply) {
           throw new Error(
             `Scene ${index + 1} was refused; the episode stops here. ` +
               `Scenes already queued will still play.`,
           );
         }
-        previousClipId = reply.clip.clip_id;
+        previousClipId = outcome.reply.clip.clip_id;
       }
       setIdea("");
       setTitle("");

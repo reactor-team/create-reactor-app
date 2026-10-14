@@ -19,7 +19,6 @@ export {
   useH3ReferenceToVideoTurboRealtimeClipFinished as useH3ClipFinished,
   useH3ReferenceToVideoTurboRealtimeClipStopped as useH3ClipStopped,
   useH3ReferenceToVideoTurboRealtimeClipFailed as useH3ClipFailed,
-  useH3ReferenceToVideoTurboRealtimeCommandError as useH3CommandError,
 } from "@reactor-models/h3-reference-to-video-turbo-realtime";
 
 export type {

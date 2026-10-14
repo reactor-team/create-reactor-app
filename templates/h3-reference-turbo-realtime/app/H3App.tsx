@@ -1,6 +1,7 @@
 "use client";
 
 import { H3Provider } from "./lib/model";
+import { CommandProvider } from "./lib/command";
 import { SessionProvider } from "./lib/session";
 import { CommandError } from "./components/CommandError";
 import { Composer } from "./components/Composer";
@@ -52,22 +53,24 @@ async function fetchToken(): Promise<string> {
 export function H3App() {
   return (
     <H3Provider jwtToken={fetchToken}>
-      <SessionProvider>
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="flex flex-1 flex-col gap-5 p-4 lg:flex-row lg:gap-6 lg:p-6">
-            <aside className="flex w-full flex-col gap-4 lg:w-[24rem] lg:shrink-0">
-              <Composer />
-            </aside>
-            <section className="flex min-w-0 flex-1 flex-col gap-3">
-              <StatusBadge />
-              <CommandError />
-              <Stage />
-              <SnapClip />
-            </section>
-          </main>
-        </div>
-      </SessionProvider>
+      <CommandProvider>
+        <SessionProvider>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex flex-1 flex-col gap-5 p-4 lg:flex-row lg:gap-6 lg:p-6">
+              <aside className="flex w-full flex-col gap-4 lg:w-[24rem] lg:shrink-0">
+                <Composer />
+              </aside>
+              <section className="flex min-w-0 flex-1 flex-col gap-3">
+                <StatusBadge />
+                <CommandError />
+                <Stage />
+                <SnapClip />
+              </section>
+            </main>
+          </div>
+        </SessionProvider>
+      </CommandProvider>
     </H3Provider>
   );
 }
