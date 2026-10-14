@@ -1,10 +1,15 @@
 "use client";
 
+import { useSessionError } from "../lib/command";
 import { useH3 } from "../lib/model";
 
 // A single line above the stage. Connecting is not a user action here — the
 // composer connects when you generate — so this reports and does not offer a
 // button. Ending the session lives with the other transport controls.
+//
+// The error is the connection's only. A refused command shows in
+// <CommandError />, so this reads `useSessionError()` rather than the SDK's
+// `lastError`, which also holds command refusals.
 const TONE: Record<string, { dot: string; label: string }> = {
   disconnected: { dot: "bg-zinc-600", label: "Not connected" },
   connecting: { dot: "bg-blue-500 animate-pulse", label: "Connecting" },
@@ -13,7 +18,8 @@ const TONE: Record<string, { dot: string; label: string }> = {
 };
 
 export function StatusBadge() {
-  const { status, lastError } = useH3();
+  const { status } = useH3();
+  const lastError = useSessionError();
   const tone = TONE[status] ?? TONE.disconnected;
 
   return (

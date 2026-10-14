@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import type { FileRef } from "@reactor-team/js-sdk";
 import {
   FastH3OmniMainVideoView,
   FastH3OmniProvider,
@@ -15,6 +16,7 @@ import { Composer } from "./components/Composer";
 import { Stage, type StageSnapshot } from "./components/Stage";
 import { QueuePanel, type QueueSnapshot, type QueuedClip } from "./components/QueuePanel";
 import { WhatNext } from "./components/WhatNext";
+import { CommandProvider, useCommand, useSessionError } from "./lib/command";
 import { validateMedia } from "./lib/media";
 import { validateDraft, type SceneDraft } from "./lib/scene";
 
@@ -61,11 +63,17 @@ function queueFrom(message: FastH3OmniQueueUpdateMessage): QueueSnapshot {
 }
 
 export function Studio({ configured }: Props) {
-  return <FastH3OmniProvider jwtToken={scopedToken}><StudioContent configured={configured} /></FastH3OmniProvider>;
+  return (
+    <FastH3OmniProvider jwtToken={scopedToken}>
+      <CommandProvider><StudioContent configured={configured} /></CommandProvider>
+    </FastH3OmniProvider>
+  );
 }
 
 function StudioContent({ configured }: Props) {
   const model = useFastH3Omni();
+  const { run } = useCommand();
+  const sessionError = useSessionError();
   const status = model.status;
   const audioTrack = useFastH3OmniTrack("main_audio");
   const lastDraft = useRef<SceneDraft | null>(null);
@@ -102,7 +110,7 @@ function StudioContent({ configured }: Props) {
       setPhase("Playing");
     } else if (message.type === "clip_finished") {
       setPhase("Ready for another scene");
-    } else if (message.type === "clip_failed" || message.type === "command_error") {
+    } else if (message.type === "clip_failed") {
       setLastError(message.reason);
       setPhase("Request failed");
     }
@@ -129,9 +137,11 @@ function StudioContent({ configured }: Props) {
     return () => { element.srcObject = null; };
   }, [audioTrack]);
 
+  // Connection and transport failures only. A refused command fails its own
+  // call, and `generate()` / `control()` report it from there.
   useEffect(() => {
-    if (model.lastError) setLastError(model.lastError.message || "Connection error.");
-  }, [model.lastError]);
+    if (sessionError) setLastError(sessionError.message || "Connection error.");
+  }, [sessionError]);
 
   async function connect() {
     if (status === "ready") return;
@@ -159,22 +169,24 @@ function StudioContent({ configured }: Props) {
       if (mediaErrors.length) throw new Error(mediaErrors.join(" "));
       await connect();
       setPhase("Uploading references");
-      const images = [];
+      const images: FileRef[] = [];
       for (const file of draft.images) images.push(await model.uploadFile(file));
-      const audios = [];
+      const audios: FileRef[] = [];
       for (const file of draft.audio) audios.push(await model.uploadFile(file));
-      const autoplay = await model.setAutoplay({ enabled: true });
-      if (!autoplay) throw new Error("Could not enable autoplay.");
+      const autoplay = await run("set_autoplay", () => model.setAutoplay({ enabled: true }));
+      if (!autoplay.ok) throw new Error(autoplay.refusal.reason);
       setPhase("Queueing clip");
-      const queued = await model.enqueue({
+      // A refusal fails this call with the model's code (`queue_full`,
+      // `invalid_audio`) and a reason written for the person using the app.
+      const queued = await run("enqueue", () => model.enqueue({
         prompt: draft.prompt.trim(),
         seconds: draft.seconds,
         metadata: draft.continueFromClipId ? "continued" : "",
         ...(images.length ? { reference_images: images } : {}),
         ...(audios.length ? { reference_audios: audios } : {}),
         ...(draft.continueFromClipId ? { continue_from_clip_id: draft.continueFromClipId } : {}),
-      });
-      if (!queued) throw new Error("The model did not accept this clip.");
+      }));
+      if (!queued.ok) throw new Error(queued.refusal.reason);
       lastDraft.current = draft;
       if (!draft.continueFromClipId) scenePrompt.current = draft.prompt;
       setPhase("Generating your clip");
@@ -190,11 +202,17 @@ function StudioContent({ configured }: Props) {
   async function control(name: "play" | "stop" | "reset") {
     try {
       setLastError(null);
-      if (name === "play") await model.play({});
-      if (name === "stop") await model.stop();
+      if (name === "play") {
+        const played = await run("play", () => model.play({}), { expectsReply: false });
+        if (!played.ok) throw new Error(played.refusal.reason);
+      }
+      if (name === "stop") {
+        const stopped = await run("stop", model.stop, { expectsReply: false });
+        if (!stopped.ok) throw new Error(stopped.refusal.reason);
+      }
       if (name === "reset") {
-        const reply = await model.reset();
-        if (!reply) throw new Error("Could not reset the session.");
+        const reset = await run("reset", model.reset);
+        if (!reset.ok) throw new Error(reset.refusal.reason);
         setLatestClipId(null);
         setSnapshot(null);
         setQueue(null);

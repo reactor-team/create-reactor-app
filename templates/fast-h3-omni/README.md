@@ -33,7 +33,8 @@ then restart the server. The API key stays on the server; the browser receives
 a scoped session token. The token route imports `MODEL_NAME` from the typed
 package, so its scope matches the model provider.
 
-`pnpm test` checks scene limits and guided prompt assembly. `pnpm build`
+`pnpm test` checks scene limits, guided prompt assembly, and how a refused
+command is read. `pnpm build`
 checks the app bundle.
 
 ## Typed model SDK
@@ -42,3 +43,9 @@ The example pins `@reactor-models/fast-h3-omni@0.2.0`. Its provider, typed
 command methods, message hook, track hook, and video view are used in
 `app/Studio.tsx`. The typed package brings in the shared JS SDK transport;
 the app imports model-specific APIs only from the typed package.
+
+`app/lib/command.tsx` is the one model-agnostic piece, so it imports
+`@reactor-team/js-sdk` directly. Every command goes through its `run()`: a
+refused command fails the call that sent it, with the model's code and a
+reason the stage shows, and the connection status never reports it as a lost
+session.

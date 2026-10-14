@@ -4,6 +4,7 @@ import { FastH3Provider } from "@reactor-models/fast-h3";
 import { Header } from "./components/Header";
 import { StatusBadge } from "./components/StatusBadge";
 import { CommandError } from "./components/CommandError";
+import { CommandProvider } from "./lib/command";
 import { EpisodeComposer } from "./components/EpisodeComposer";
 import { NowPlaying } from "./components/NowPlaying";
 import { QueuePanel } from "./components/QueuePanel";
@@ -54,22 +55,24 @@ async function fetchToken(): Promise<string> {
 export function FastH3App() {
   return (
     <FastH3Provider jwtToken={fetchToken}>
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:flex-row lg:gap-6 lg:p-6">
-          <aside className="flex w-full flex-col gap-4 lg:w-96 lg:shrink-0">
-            <StatusBadge />
-            <CommandError />
-            <NowPlaying />
-            <EpisodeComposer />
-            <QueuePanel />
-            <SnapClip />
-          </aside>
-          <section className="flex-1">
-            <Video />
-          </section>
-        </main>
-      </div>
+      <CommandProvider>
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:flex-row lg:gap-6 lg:p-6">
+            <aside className="flex w-full flex-col gap-4 lg:w-96 lg:shrink-0">
+              <StatusBadge />
+              <CommandError />
+              <NowPlaying />
+              <EpisodeComposer />
+              <QueuePanel />
+              <SnapClip />
+            </aside>
+            <section className="flex-1">
+              <Video />
+            </section>
+          </main>
+        </div>
+      </CommandProvider>
     </FastH3Provider>
   );
 }

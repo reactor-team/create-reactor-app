@@ -61,8 +61,20 @@ before adding a folder. The rules that matter most often:
   that command and never on a second client in the session. Read answers off the
   await; keep subscriptions for what the model broadcasts. Which commands answer
   and where a refusal surfaces is per-model — each skill carries its own table.
+- **A refusal belongs on the awaited call too.** A model that refuses a
+  command fails that command's request with a stable `code` and a reason, and
+  only the caller is told. The JS SDK resolves the call `undefined` and emits
+  the failure on its `error` event with `operation: "sendCommand"`; the Python
+  SDK raises a `ReactorError` from `send_command`. Read it off the call, not
+  off a `command_error` listener, and never show it through the connection
+  status — the SDK's `lastError` holds refusals as well as connection
+  failures. The H3 templates carry `app/lib/command.tsx` (`run()`) for this,
+  with a generic refusal for a reply-declaring call that resolves `undefined`
+  with no failure attached.
 - **Model-specific code comes from the typed `@reactor-models/*` package.** The
-  one deliberate exception is `SnapClip.tsx`: recording is model-agnostic and
+  deliberate exceptions are `SnapClip.tsx` and `app/lib/command.tsx`, which
+  reads command failures off the base SDK's `error` event. Both are
+  model-agnostic. For `SnapClip.tsx`, recording is model-agnostic and
   the typed packages re-export `requestClip` and `downloadClipAsFile` but none
   of `ClipPlayer`, `ClipDownloadButton`, or `RecordingError`. The test for
   anything else: if it needs this model's events, messages, or commands, it

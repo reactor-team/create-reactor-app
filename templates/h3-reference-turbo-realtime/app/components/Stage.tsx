@@ -7,6 +7,7 @@ import {
   useH3StateUpdate,
   type H3State,
 } from "../lib/model";
+import { useCommand } from "../lib/command";
 import { useSession } from "../lib/session";
 import { WhatNext } from "./WhatNext";
 
@@ -83,6 +84,7 @@ export function Stage() {
 
 function Transport({ state }: { state: H3State | null }) {
   const { status, play, stop, reset, disconnect } = useH3();
+  const { run } = useCommand();
 
   if (status !== "ready" || !state) return null;
 
@@ -103,7 +105,7 @@ function Transport({ state }: { state: H3State | null }) {
       <div className="flex items-center gap-1.5">
         {state.playing ? (
           <button
-            onClick={() => void stop()}
+            onClick={() => void run("stop", stop, { expectsReply: false })}
             title={
               state.autoplay
                 ? "Skip to the next ready clip"
@@ -115,7 +117,9 @@ function Transport({ state }: { state: H3State | null }) {
           </button>
         ) : (
           <button
-            onClick={() => void play({})}
+            onClick={() =>
+              void run("play", () => play({}), { expectsReply: false })
+            }
             disabled={!canPlay}
             className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:text-zinc-100 disabled:opacity-30"
           >
@@ -123,7 +127,7 @@ function Transport({ state }: { state: H3State | null }) {
           </button>
         )}
         <button
-          onClick={() => void reset()}
+          onClick={() => void run("reset", reset)}
           title="Drop both queues, cut playback, restore defaults"
           className="rounded-md border border-zinc-800 px-2.5 py-1 text-xs text-zinc-500 hover:text-zinc-300"
         >

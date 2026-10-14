@@ -56,6 +56,9 @@ three or four strings.
   carry over. The clip picks up the last one's motion, camera, and audio
   through `continue_from_clip_id` rather than cutting. Queue the next beat
   while the current one plays and they run back to back.
+- **Says why a command was refused.** A full queue or a bad reference fails
+  the call that sent it, and the model's reason shows above the stage, apart
+  from the connection status.
 - **Snap a clip.** Capture the last few seconds of the session and download it.
 
 ## Code tour
@@ -68,10 +71,14 @@ three or four strings.
 | `app/lib/model.ts`               | Short names for the typed SDK's symbols, plus the canvas constants. |
 | `app/lib/shot.ts`                | The shot model, the three modes, and the prompt builder.           |
 | `app/lib/session.tsx`            | Shared state: the draft, the uploads, connect/upload/enqueue.      |
+| `app/lib/command.tsx`            | `run()`: sends a command and reads a refusal off that call.        |
+| `app/lib/refusal.ts`             | Reads the code and reason out of a failed command; `pnpm test` pins it. |
 | `app/components/Composer.tsx`    | The left rail: mode, references, shot, controls.                   |
 | `app/components/ReferenceSlot.tsx` | One labelled reference and its description.                      |
 | `app/components/ShotControls.tsx`  | Length and seed pickers.                                         |
 | `app/components/Stage.tsx`       | The video, its state overlay, and the transport.                   |
+| `app/components/CommandError.tsx` | The latest refused command with the model's reason, and failed builds. |
+| `app/components/StatusBadge.tsx` | The connection state; command refusals stay out of it.             |
 | `app/components/WhatNext.tsx`    | The continuation box shown when a clip finishes.                   |
 | `app/components/SnapClip.tsx`    | Clip capture; model-agnostic.                                      |
 

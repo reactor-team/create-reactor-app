@@ -11,6 +11,9 @@ importers:
       '@reactor-models/fast-h3-omni':
         specifier: 0.2.0
         version: 0.2.0(react@19.3.0)
+      '@reactor-team/js-sdk':
+        specifier: 3.0.2
+        version: 3.0.2(react@19.3.0)
       '@reactor-team/ui':
         specifier: 1.4.1
         version: 1.4.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)

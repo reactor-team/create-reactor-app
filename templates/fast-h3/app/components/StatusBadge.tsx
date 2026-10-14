@@ -1,6 +1,7 @@
 "use client";
 
 import { useFastH3 } from "@reactor-models/fast-h3";
+import { useSessionError } from "../lib/command";
 
 // The four-state connection machine, surfaced visibly:
 //   disconnected → connecting → waiting → ready
@@ -9,6 +10,10 @@ import { useFastH3 } from "@reactor-models/fast-h3";
 // app. You compose an episode first, and "Queue episode" connects on
 // demand the moment there is something to build — sessions only run while
 // they have work. Disconnect stays, as the way to end a session early.
+//
+// The error line is for the connection only. A refused command is reported
+// by <CommandError />, so this badge reads `useSessionError()` rather than
+// the SDK's `lastError`, which also holds command refusals.
 const TONE: Record<string, { dot: string; label: string }> = {
   disconnected: { dot: "bg-zinc-500", label: "Offline" },
   connecting: { dot: "bg-blue-500 animate-pulse", label: "Connecting…" },
@@ -17,7 +22,8 @@ const TONE: Record<string, { dot: string; label: string }> = {
 };
 
 export function StatusBadge() {
-  const { status, lastError, disconnect } = useFastH3();
+  const { status, disconnect } = useFastH3();
+  const lastError = useSessionError();
   const tone = TONE[status] ?? TONE.disconnected;
 
   return (

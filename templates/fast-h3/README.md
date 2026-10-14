@@ -46,8 +46,9 @@ Get an API key at
   you click "Queue episode"; the session starts right then.
 - **See the queues live.** The queue panel mirrors the model's generation
   (building) and playout (ready) queues, with per-clip remove; capacity
-  limits are checked before queueing and refusals are surfaced, never
-  silent.
+  limits are checked before queueing, and a refused command reports the
+  model's reason on the call that was refused, never silently and never as
+  a connection error.
 - **Snap a clip.** Capture the last 10 seconds of the live stream as an
   MP4 download.
 
@@ -72,7 +73,9 @@ pitches the episodes. The CLI scaffolds one folder per project, so
 | [`app/components/QueuePanel.tsx`](app/components/QueuePanel.tsx)           | Both model queues live from `queue_update`, with pop.                                                          |
 | [`app/components/NowPlaying.tsx`](app/components/NowPlaying.tsx)           | On-air state from the metadata echo, autoplay toggle, skip.                                                    |
 | [`app/components/StatusBadge.tsx`](app/components/StatusBadge.tsx)         | The four-state connection lifecycle, read-only by design: queueing an episode is the only thing that connects. |
-| [`app/components/CommandError.tsx`](app/components/CommandError.tsx)       | Every refused command, visibly.                                                                                |
+| [`app/components/CommandError.tsx`](app/components/CommandError.tsx)       | Every refused command, visibly, with the model's reason.                                                       |
+| [`app/lib/command.tsx`](app/lib/command.tsx)                               | `run()`: sends one command and reads a refusal off that call, kept apart from connection errors.               |
+| [`app/lib/refusal.ts`](app/lib/refusal.ts)                                 | Reads the model's code and reason out of a failed command; `pnpm test` pins it.                               |
 | [`app/components/SnapClip.tsx`](app/components/SnapClip.tsx)               | Last-N-seconds capture via the recording surface.                                                              |
 | [`app/lib/prompts.ts`](app/lib/prompts.ts)                                 | Curated episode ideas + a hand-written example episode that models the hard-cut rules.                         |
 | [`app/lib/tag.ts`](app/lib/tag.ts)                                         | The metadata tag written on every scene and read back off the echo.                                            |

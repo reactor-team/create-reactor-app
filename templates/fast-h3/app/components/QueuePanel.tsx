@@ -8,6 +8,7 @@ import {
   type FastH3QueueUpdateMessage,
   type FastH3StateUpdateMessage,
 } from "@reactor-models/fast-h3";
+import { useCommand } from "../lib/command";
 import { parseTag } from "../lib/tag";
 
 // Both queues, live from `queue_update`: the generation queue (scenes
@@ -17,6 +18,7 @@ import { parseTag } from "../lib/tag";
 // deployment publishes them live, never assume the defaults.
 export function QueuePanel() {
   const { status, pop } = useFastH3();
+  const { run } = useCommand();
   const [queues, setQueues] = useState<FastH3QueueUpdateMessage | null>(null);
   const [snapshot, setSnapshot] = useState<FastH3StateUpdateMessage | null>(
     null,
@@ -71,7 +73,9 @@ export function QueuePanel() {
                 )}
               </span>
               <button
-                onClick={() => void pop({ clip_id: clip.clip_id })}
+                onClick={() =>
+                  void run("pop", () => pop({ clip_id: clip.clip_id }))
+                }
                 className="shrink-0 text-zinc-600 hover:text-red-400"
                 title="Remove from the queue"
               >

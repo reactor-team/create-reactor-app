@@ -1,6 +1,6 @@
 ---
 name: fast-h3
-description: Extend the FastH3 Episodes starter — a Next.js app on @reactor-models/fast-h3 that composes multi-scene episodes and plays them as one continuous video via chained clips. Covers the model's queue contract, the hard-cut prompting rule that keeps chained scenes from degrading, the auth pattern, the state-snapshot pattern, capacity/error handling, and every model knob deliberately not shipped. For the multi-viewer broadcast version of fast-h3, see ../../fast-h3-livestream instead.
+description: Extend the FastH3 Episodes starter — a Next.js app on @reactor-models/fast-h3 that composes multi-scene episodes and plays them as one continuous video via chained clips. Covers the model's queue contract, the hard-cut prompting rule that keeps chained scenes from degrading, the auth pattern, the state-snapshot pattern, reading refusals off the call, capacity handling, and every model knob deliberately not shipped. For the multi-viewer broadcast version of fast-h3, see ../../fast-h3-livestream instead.
 ---
 
 # Extending FastH3 Episodes
@@ -13,12 +13,12 @@ output looking right — so your change lands without re-learning any of it.
 
 Two templates build on this model, with different product shapes:
 
-|                      | **`fast-h3` (this app)**                              | [`fast-h3-livestream`](../../fast-h3-livestream)                     |
-| -------------------- | ----------------------------------------------------- | -------------------------------------------------------------------- |
-| Shape                | One browser session, private to the person running it | A 24/7 broadcast channel many viewers watch together                 |
+|                      | **`fast-h3` (this app)**                              | [`fast-h3-livestream`](../../fast-h3-livestream)                        |
+| -------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
+| Shape                | One browser session, private to the person running it | A 24/7 broadcast channel many viewers watch together                    |
 | Parts                | One Next.js app on the typed SDK                      | A Python streamer publishing into a LiveKit room, plus a Next.js viewer |
-| Who drives the model | The browser, directly                                 | The streamer; viewers only chat                                      |
-| Episode source       | The composer UI (AI writer or by hand)                | Viewer chat ideas, plus a default scene rotation                     |
+| Who drives the model | The browser, directly                                 | The streamer; viewers only chat                                         |
+| Episode source       | The composer UI (AI writer or by hand)                | Viewer chat ideas, plus a default scene rotation                        |
 
 `create-reactor-app` scaffolds **one folder per project** — `--model=fast-h3`
 gives you this app, `--model=fast-h3-livestream` the channel. Both skills
@@ -38,12 +38,12 @@ them chained, and mirror the model's state.
 
 ## The four concepts
 
-| Concept    | What it is here                                                                                  | API                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| Connection | `disconnected → connecting → waiting → ready`; commands need `ready`                             | `useFastH3().status / connect / disconnect`                               |
-| Commands   | `enqueue`, `play`, `stop`, `pop`, `move`, `reset`, `set_*`, `get_*`                              | typed methods on `useFastH3()`, each resolving with its reply             |
-| Messages   | `state_update` (the snapshot), `queue_update` (both queues), `clip_*` lifecycle, `command_error` | `useFastH3StateUpdate`, `useFastH3QueueUpdate`, `useFastH3ClipStarted`, … |
-| Tracks     | `main_video` (24 fps) + `main_audio` (48 kHz, synced)                                            | `<FastH3MainVideoView audioTrack="main_audio" />`                         |
+| Concept    | What it is here                                                                 | API                                                                                 |
+| ---------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Connection | `disconnected → connecting → waiting → ready`; commands need `ready`            | `useFastH3().status / connect / disconnect`                                         |
+| Commands   | `enqueue`, `play`, `stop`, `pop`, `move`, `reset`, `set_*`, `get_*`             | typed methods on `useFastH3()`, each resolving with its reply; sent through `run()` |
+| Messages   | `state_update` (the snapshot), `queue_update` (both queues), `clip_*` lifecycle | `useFastH3StateUpdate`, `useFastH3QueueUpdate`, `useFastH3ClipStarted`, …           |
+| Tracks     | `main_video` (24 fps) + `main_audio` (48 kHz, synced)                           | `<FastH3MainVideoView audioTrack="main_audio" />`                                   |
 
 ## The queue contract (what the UI mirrors)
 
@@ -70,8 +70,9 @@ popped). What the app relies on:
   would accept right now). **`queue_update`** carries both queues in full
   plus `history` — built clips that already played but can still be
   continued from.
-- **`command_error`** is broadcast on every refusal; the refused typed call
-  resolves `undefined`. Both must surface in the UI.
+- **A refused command fails its own call**, with a stable code and a reason
+  (see [Refusals](#refusals-read-them-off-the-call)). The refusal must
+  surface in the UI.
 - Between non-continuing clips the stream cuts to black (configurable via
   `set_flush_on_clip_end`); that hold is the model's contract, not a bug.
 
@@ -149,10 +150,71 @@ Never aggregate `clip_started` / `clip_generated` / `clip_finished` into
 your own queue state; `queue_update` and `state_update` are the truth. The
 lifecycle hooks are for one-shot reactions (labels, toasts, sounds).
 
+## Refusals: read them off the call
+
+The model refuses a command by failing that command's request with a `code`
+and a reason. Three properties make that the thing to build on:
+
+- **The caller learns on its own call.** No listener has to guess which
+  command a refusal belongs to.
+- **Only the caller is told.** Another client in the same session (a second
+  tab, a viewer) never sees a refusal of a command it did not send.
+- **The code is stable.** Branch on `code`; show the reason, which is
+  written for the person using the app.
+
+The SDK never rejects a command call. A refused call resolves `undefined`,
+and the failure arrives on the SDK's `error` event with
+`operation: "sendCommand"` and a message of the form
+`command 'enqueue' failed (queue_full): <reason>`. `app/lib/command.tsx`
+turns that into one call:
+
+```tsx
+const { run } = useCommand();
+const outcome = await run("enqueue", () => enqueue({ prompt, metadata }));
+if (!outcome.ok) {
+  outcome.refusal.code; // "queue_full"
+  outcome.refusal.reason; // "The generation queue is full (…)"
+  return;
+}
+outcome.reply?.clip.clip_id;
+```
+
+`run()` also records the refusal for `<CommandError />`, and the next
+successful command clears it. Three rules it encodes:
+
+- `undefined` from a command with a declared reply (`enqueue`, `pop`,
+  `move`, `set_*`, `reset`) and no failure attached is still a refusal,
+  shown as "The model refused this command." A model release that reports
+  refusals another way resolves like that.
+- `play` and `stop` declare no reply, so `undefined` is also success; pass
+  `{ expectsReply: false }` and only a failure counts.
+- A refusal is not a connection problem. The SDK's `lastError` holds every
+  failure, refusals included, so `StatusBadge` reads `useSessionError()`,
+  which skips them. Never show a refusal as a lost session.
+
+Do not listen for a `command_error` message to learn about refusals
+(`useFastH3CommandError`): the typed package still exports the hook, but
+the call is where the refusal belongs, and the message reaches every client
+in the session.
+
+| Command      | Reply             | Codes it can fail with                                                                              |
+| ------------ | ----------------- | --------------------------------------------------------------------------------------------------- |
+| `enqueue`    | `clip_queued`     | `empty_prompt`, `prompt_too_long`, `queue_full`, `invalid_request`, `unknown_clip`, `invalid_image` |
+| `play`       | none              | `already_playing`, `clip_not_ready`, `unknown_clip`, `no_ready_clip`                                |
+| `stop`       | none              | `not_playing`                                                                                       |
+| `pop`        | `clip_popped`     | `unknown_clip`, `clip_referenced`                                                                   |
+| `move`       | `clip_moved`      | `unknown_clip`                                                                                      |
+| `set_canvas` | `canvas_accepted` | `session_not_empty`, `invalid_aspect`                                                               |
+
+`set_seed`, `set_clip_seconds`, `set_autoplay`, `set_flush_on_clip_end`,
+`reset`, `get_state`, and `get_queue` do not refuse. A failure that never
+reached the model (no session yet) also comes back through `run()`, with an
+SDK code such as `INVALID_STATE`.
+
 ## Sending commands
 
-- Await every typed call; a resolved `undefined` on a command with a
-  declared reply means **refused** — `command_error` carries the reason.
+- Send every command through `run()` and await it; read a refusal off the
+  outcome, never off a message listener.
 - Gate capacity _before_ multi-scene enqueues: read a fresh snapshot
   (`getState()`) and compare `generation_capacity - generation_queued`
   against the episode length. A half-queued episode is worse than a clear
@@ -189,8 +251,9 @@ phase; the typed method is ready.
 modal with a download. `requestClip(seconds)` asks for the window,
 `<ClipPlayer>` previews it, `<ClipDownloadButton>` saves an MP4.
 
-This is the **one place** in the app where importing from
-`@reactor-team/js-sdk` directly is idiomatic rather than a smell. The typed
+This and `app/lib/command.tsx` are the **only places** in the app where
+importing from `@reactor-team/js-sdk` directly is idiomatic rather than a
+smell. The typed
 package carries `requestClip` and `downloadClipAsFile` on its hook, but
 deliberately re-exports none of the components or `RecordingError`, because
 none of them depend on model identity. The rule for anything else you add: if
@@ -238,18 +301,24 @@ downloaded file is the artifact; the URL is not something to share or persist.
    `state_update`.
 6. **Keeping episode bookkeeping in client state** instead of the metadata
    echo — a reconnect loses it; the echo survives.
-7. **Importing `@reactor-team/ui` React components into Server
+7. **Calling a typed command without `run()`**, or reading refusals from a
+   `command_error` listener — the refusal belongs to the call, and showing
+   it through `lastError` makes a full queue look like a lost connection.
+8. **Importing `@reactor-team/ui` React components into Server
    Components** — they use hooks and die at runtime; use the CSS design
    tokens (`bg-brand`, `font-mono`) instead.
-8. **Minting unscoped or cacheable tokens** — see the auth section's four
+9. **Minting unscoped or cacheable tokens** — see the auth section's four
    rules.
 
 ## Checklist for a change
 
-- [ ] `pnpm build` and `pnpm tsc --noEmit` clean.
+- [ ] `pnpm build` and `pnpm tsc --noEmit` clean; `pnpm test` passes (it
+      pins how `app/lib/refusal.ts` reads a refused command).
 - [ ] New snapshot-holding components clear on disconnect.
 - [ ] Multi-scene enqueues stay sequential, chained, and capacity-gated.
 - [ ] The hard-cut and self-containment rules survive any prompt edit, in
       all three places they live.
-- [ ] Refusals stay visible (`CommandError` mounted, inline errors kept).
+- [ ] Every command goes through `run()`; refusals stay visible
+      (`CommandError` mounted, inline errors kept) and out of the
+      connection status.
 - [ ] New config landed in `.env.example`; no `.env.local` committed.
