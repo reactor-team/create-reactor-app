@@ -312,7 +312,8 @@ downloaded file is the artifact; the URL is not something to share or persist.
 
 ## Checklist for a change
 
-- [ ] `pnpm build` and `pnpm tsc --noEmit` clean.
+- [ ] `pnpm build` and `pnpm tsc --noEmit` clean; `pnpm test` passes (it
+      pins how `app/lib/refusal.ts` reads a refused command).
 - [ ] New snapshot-holding components clear on disconnect.
 - [ ] Multi-scene enqueues stay sequential, chained, and capacity-gated.
 - [ ] The hard-cut and self-containment rules survive any prompt edit, in

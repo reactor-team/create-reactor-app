@@ -157,8 +157,15 @@ Two more rules `ReactorLink.send_command` encodes:
   generic reason. A model release that reports refusals another way answers
   like that. Pass `expects_reply=False` for `play` and `stop`, which declare
   no reply.
+- The typed `code` decides what a failure is, not the message: a model's
+  code is snake_case, the SDK's own codes are upper case. A model's refusal
+  whose message does not parse is still a refusal, with the generic reason.
 - Any other failure (the session dropped mid-command) returns `None`, and
   the caller retries once the session is back.
+
+`streamer/tests/test_reactor_link.py` pins all of this, and the director's
+retry decisions, against the SDK's own `ReactorError`. Run it from
+`streamer/` with `python -m unittest discover -s tests`.
 
 | Command      | Reply             | Codes it can fail with                                                                               |
 | ------------ | ----------------- | ---------------------------------------------------------------------------------------------------- |
@@ -310,7 +317,8 @@ rather than overloading `show.chat`.
 
 ## Checklist for a change
 
-- [ ] `python -m py_compile streamer/*.py` clean; `pnpm build` clean in `viewer/`.
+- [ ] `python -m py_compile streamer/*.py` clean; `python -m unittest discover -s tests`
+      passes in `streamer/`; `pnpm build` clean in `viewer/`.
 - [ ] The upsampler's hard-cut and self-containment rules are intact.
 - [ ] Scene count and length still come from env, clamped to `state_update` bounds.
 - [ ] Every new failure path answers the affected viewer in chat.

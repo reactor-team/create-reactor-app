@@ -72,6 +72,7 @@ three or four strings.
 | `app/lib/shot.ts`                | The shot model, the three modes, and the prompt builder.           |
 | `app/lib/session.tsx`            | Shared state: the draft, the uploads, connect/upload/enqueue.      |
 | `app/lib/command.tsx`            | `run()`: sends a command and reads a refusal off that call.        |
+| `app/lib/refusal.ts`             | Reads the code and reason out of a failed command; `pnpm test` pins it. |
 | `app/components/Composer.tsx`    | The left rail: mode, references, shot, controls.                   |
 | `app/components/ReferenceSlot.tsx` | One labelled reference and its description.                      |
 | `app/components/ShotControls.tsx`  | Length and seed pickers.                                         |

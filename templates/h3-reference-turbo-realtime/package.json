@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --test app/lib/*.test.mjs"
   },
   "dependencies": {
     "@reactor-models/h3-reference-to-video-turbo-realtime": "^0.3.0",

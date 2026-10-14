@@ -75,6 +75,7 @@ pitches the episodes. The CLI scaffolds one folder per project, so
 | [`app/components/StatusBadge.tsx`](app/components/StatusBadge.tsx)         | The four-state connection lifecycle, read-only by design: queueing an episode is the only thing that connects. |
 | [`app/components/CommandError.tsx`](app/components/CommandError.tsx)       | Every refused command, visibly, with the model's reason.                                                       |
 | [`app/lib/command.tsx`](app/lib/command.tsx)                               | `run()`: sends one command and reads a refusal off that call, kept apart from connection errors.               |
+| [`app/lib/refusal.ts`](app/lib/refusal.ts)                                 | Reads the model's code and reason out of a failed command; `pnpm test` pins it.                               |
 | [`app/components/SnapClip.tsx`](app/components/SnapClip.tsx)               | Last-N-seconds capture via the recording surface.                                                              |
 | [`app/lib/prompts.ts`](app/lib/prompts.ts)                                 | Curated episode ideas + a hand-written example episode that models the hard-cut rules.                         |
 | [`app/lib/tag.ts`](app/lib/tag.ts)                                         | The metadata tag written on every scene and read back off the echo.                                            |

@@ -182,4 +182,5 @@ helpers while keeping model-specific commands on the typed package.
 - Clear state and queue snapshots on disconnect.
 - Verify image, audio, text-only, and continuation paths in a browser after a
   typed SDK or schema upgrade.
-- Run `pnpm build` and a fresh install from an isolated copy of this folder.
+- Run `pnpm test`, `pnpm build`, and a fresh install from an isolated copy of
+  this folder.

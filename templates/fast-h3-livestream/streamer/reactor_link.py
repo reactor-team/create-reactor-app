@@ -63,7 +63,13 @@ _DEFAULT_STATE: dict[str, Any] = {
 
 # How the SDK words a command the model refused:
 # `command 'enqueue' failed (queue_full): The generation queue is full.`
+# The typed `error.code` decides what a failure is; this pattern only lifts
+# the model's reason out of the message. tests/test_reactor_link.py pins it.
 _COMMAND_FAILURE = re.compile(r"^command '([^']+)' failed \(([^)]*)\): (.*)$", re.DOTALL)
+
+# The SDK's own codes are upper case (`INVALID_STATE`); a model's are
+# snake_case (`queue_full`).
+_MODEL_CODE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 GENERIC_REFUSAL = "The model refused this command."
 
@@ -84,11 +90,21 @@ class CommandRefused(Exception):
 
 
 def _refusal(command: str, error: ReactorError) -> CommandRefused | None:
-    """The refusal a failed `send_command` carries, or None for any other failure."""
-    match = _COMMAND_FAILURE.match(error.message)
-    if error.operation != "send_command" or match is None:
+    """The refusal a failed `send_command` carries, or None for any other failure.
+
+    A failure with a model's code is a refusal even when its message does not
+    parse; it then carries the generic reason rather than the SDK's wording.
+    A failure with one of the SDK's own codes (no session, a dropped
+    transport) is not a refusal.
+    """
+    if error.operation != "send_command":
         return None
-    return CommandRefused(command, match.group(2) or error.code, match.group(3))
+    match = _COMMAND_FAILURE.match(error.message)
+    if match is None and not _MODEL_CODE.match(error.code or ""):
+        return None
+    code = error.code or match.group(2)
+    reason = match.group(3) if match else GENERIC_REFUSAL
+    return CommandRefused(command, code, reason)
 
 
 def payload(reply: Any) -> Any:

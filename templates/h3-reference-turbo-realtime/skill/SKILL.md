@@ -324,7 +324,8 @@ file into another template unchanged.
 
 ## Checklist for a change
 
-- `pnpm build` passes (it runs `tsc --noEmit`).
+- `pnpm build` passes (it runs `tsc --noEmit`), and so does `pnpm test`, which
+  pins how `app/lib/refusal.ts` reads a refused command.
 - Any new state-holding component clears its snapshot when
   `status !== "ready"`.
 - New commands go through `run()` and are awaited; refusals surface in

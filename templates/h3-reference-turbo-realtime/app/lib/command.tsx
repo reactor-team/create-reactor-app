@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useReactor, type ReactorError } from "@reactor-team/js-sdk";
+import { belongsTo, GENERIC_REFUSAL, refusalOf, type Refusal } from "./refusal";
 
 // How this app learns that the model refused a command.
 //
@@ -23,7 +24,7 @@ import { useReactor, type ReactorError } from "@reactor-team/js-sdk";
 // `operation: "sendCommand"` and a message of the form
 // `command 'enqueue' failed (queue_full): The generation queue is full.`
 // `run()` below collects that event for the span of one call and hands back
-// either the reply or the refusal.
+// either the reply or the refusal; refusal.ts reads the failure.
 //
 // A command that declares a reply (`enqueue` → `clip_queued`) resolving
 // `undefined` with no failure attached is still a refusal: a model release
@@ -35,30 +36,11 @@ import { useReactor, type ReactorError } from "@reactor-team/js-sdk";
 // `error` event, refusals included, so the connection status reads
 // `useSessionError()` instead, which skips command failures.
 
-export type Refusal = { command: string; code: string; reason: string };
+export type { Refusal } from "./refusal";
 
 export type Outcome<T> =
   | { ok: true; reply: T | undefined }
   | { ok: false; refusal: Refusal };
-
-export const GENERIC_REFUSAL = "The model refused this command.";
-
-const COMMAND_FAILURE = /^command '([^']+)' failed \(([^)]*)\): ([\s\S]*)$/;
-
-function refusalOf(command: string, error: ReactorError): Refusal {
-  const match = COMMAND_FAILURE.exec(error.message);
-  if (!match) return { command, code: error.code, reason: error.message };
-  return { command, code: match[2] || error.code, reason: match[3] };
-}
-
-/** True for a failure that belongs to `command`. A failure that never reached
- *  the model (no session yet, say) carries no command name and belongs to
- *  whichever call is in flight. */
-function belongsTo(command: string, error: ReactorError): boolean {
-  if (error.operation !== "sendCommand") return false;
-  const match = COMMAND_FAILURE.exec(error.message);
-  return !match || match[1] === command;
-}
 
 type RunOptions = {
   /** False for a command whose schema declares no reply (`play`, `stop`). */

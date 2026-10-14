@@ -33,7 +33,8 @@ then restart the server. The API key stays on the server; the browser receives
 a scoped session token. The token route imports `MODEL_NAME` from the typed
 package, so its scope matches the model provider.
 
-`pnpm test` checks scene limits and guided prompt assembly. `pnpm build`
+`pnpm test` checks scene limits, guided prompt assembly, and how a refused
+command is read. `pnpm build`
 checks the app bundle.
 
 ## Typed model SDK
