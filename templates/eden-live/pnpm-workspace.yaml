@@ -1,0 +1,11 @@
+packages: []
+minimumReleaseAgeExclude:
+  - "@reactor-models/eden-live@2.1.0"
+  - "@reactor-team/js-sdk@3.2.0"
+onlyBuiltDependencies:
+  - sharp
+  - "@tailwindcss/oxide"
+# Keep installs on the established Draco patch used by three-stdlib.
+# Works with pnpm 10 and pnpm 11 without a release-age exception.
+overrides:
+  three-stdlib>draco3d: 1.5.7
