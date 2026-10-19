@@ -4,6 +4,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import {
   GAMES,
+  sendCommand,
   useEdenLive,
   useEdenLiveStateUpdate,
   useReactorClient,
@@ -117,9 +118,8 @@ export function Playground() {
     onError
   );
 
-  // Await a typed command and adopt its `state_update` reply. A refused or
-  // failed command resolves `undefined`; the SDK's last error carries the
-  // model's code and message (for example `pause_required`).
+  // Await a typed command and adopt its `state_update` reply. A refusal
+  // throws with the model's code and message (for example `pause_required`).
   async function command(
     name: string,
     call: () => Promise<StateUpdate | undefined>
@@ -127,16 +127,12 @@ export function Playground() {
     if (connection.current.status !== "ready")
       throw new Error("Connect before sending commands.");
     const session = connection.current.id;
-    const reply = await call();
+    const reply = await sendCommand(reactor, name, call);
     if (
       connection.current.status !== "ready" ||
       connection.current.id !== session
     )
       throw new Error("Session changed. Connect and try again.");
-    if (!reply)
-      throw new Error(
-        reactor.getLastError()?.message ?? `${name} was not accepted.`
-      );
     accept(reply);
     return reply;
   }
@@ -449,6 +445,12 @@ export function Playground() {
               disabled={Boolean(busy)}
               hint="It runs in this page and streams to the model as your game."
               onPick={(next) => {
+                if (
+                  next === worldId &&
+                  snapshot?.started &&
+                  !snapshot.ended
+                )
+                  return;
                 setWorldId(next as LocalWorldId);
                 if (ready)
                   void run("Loading your world", () =>

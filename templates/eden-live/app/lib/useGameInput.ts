@@ -16,7 +16,7 @@ import {
   type GameKey,
   type Look,
 } from "./input";
-import { useEdenLive, useReactorClient } from "./model";
+import { sendCommand, useEdenLive, useReactorClient } from "./model";
 
 // How often locked-pointer motion becomes a held look rate.
 const LOOK_SAMPLE_MS = 33;
@@ -42,18 +42,19 @@ export function useGameInput(
   const [mouseLook, setMouseLook] = useState(false);
 
   const { keys, looks } = useMemo(() => {
-    const refused = (name: string) =>
-      new Error(reactor.getLastError()?.message ?? `${name} was not accepted.`);
     const report = (error: unknown) => errorRef.current(error);
     return {
       keys: createKeySender(async (next) => {
         if (live.current.status !== "ready") return;
-        if (!(await live.current.setKeys({ keys: next })))
-          throw refused("Keyboard update");
+        await sendCommand(reactor, "set_keys", () =>
+          live.current.setKeys({ keys: next })
+        );
       }, report),
       looks: createLookSender(async (value) => {
         if (live.current.status !== "ready") return;
-        if (!(await live.current.setLook(value))) throw refused("Mouse look");
+        await sendCommand(reactor, "set_look", () =>
+          live.current.setLook(value)
+        );
       }, report),
     };
   }, [reactor]);

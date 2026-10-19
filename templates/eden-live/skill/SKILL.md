@@ -106,9 +106,11 @@ subscription: a reply belongs to the connection that asked. Use
 `useEdenLiveStateUpdate` for the snapshot the model broadcasts every chunk.
 
 A refused call resolves `undefined` and never rejects. There is no
-`command_error` message. Read the reason from
-`useReactorClient().getLastError()`: its `code` is the model's code (for
-example `pause_required`) and its message is the model's text. The app shows it
+`command_error` message. The reason arrives on the client's `error` event as
+`command '<name>' failed (<code>): <message>`, where `code` is the model's code
+(for example `pause_required`). Send commands through `sendCommand` in
+`app/lib/model.ts`, which collects that event for one call and throws it.
+Do not read `getLastError()`: it is client-wide and can hold an older failure. The app shows the reason
 in the error banner, except for the errors a user's own Disconnect causes.
 
 Snapshot fields: `source`, `game`, `image_name`, `prompt`, `seed`, `keys`,
@@ -184,7 +186,7 @@ in games that have it, the result card at the end, and a red tint on a loss.
 ## Checklist for a change
 
 - Every control is gated on `status === "ready"` and the phase it needs.
-- Every command is awaited, and an `undefined` reply shows the last error.
+- Every command is awaited, and a refusal shows that call's own error.
 - Held inputs are released on blur, hidden tab, pause, and disconnect.
 - Both modes still start a world, and switching mode while live pauses first.
 - Disconnect, then connect again: no state from the old session remains.

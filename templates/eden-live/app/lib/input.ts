@@ -57,6 +57,7 @@ export function createKeySender(
     reset() {
       epoch++;
       held = new Set();
+      chain = Promise.resolve();
     },
     press(key: GameKey) {
       if (held.has(key)) return chain;

@@ -35,3 +35,28 @@ test("coalesces initial minting, preserves session token, refuses expired sessio
     Date.now = originalNow;
   }
 });
+
+test("a refresh for a new connection does not replace a live session's token", async () => {
+  const originalFetch = globalThis.fetch,
+    originalNow = Date.now;
+  let now = 100_000_000,
+    requests = 0;
+  Date.now = () => now;
+  globalThis.fetch = async () => {
+    requests++;
+    return new Response(
+      JSON.stringify({ jwt: `pin-${requests}`, expires_at: now / 1000 + 3600 })
+    );
+  };
+  try {
+    const first = await fetchToken();
+    assert.equal(await fetchToken({ sessionId: "live" }), first);
+    now += 3550_000;
+    const refreshed = await fetchToken();
+    assert.notEqual(refreshed, first);
+    assert.equal(await fetchToken({ sessionId: "live" }), first);
+  } finally {
+    globalThis.fetch = originalFetch;
+    Date.now = originalNow;
+  }
+});

@@ -134,7 +134,7 @@ client code:
 | --- | --- |
 | `fast-h3`, `fast-h3-omni`, `h3-reference-turbo-realtime`, `helios`, `lingbot`, `lingbot-world-2`, `longlive-v2`, `ltx2`, `sana-streaming`, `vidu-s2-avatar`, `visko-orbis-stable`, `visko-orbis-dynamic` | resolves the call `undefined` and broadcasts `command_error` to every connection. Surface that hook. |
 | `happy-oyster` | declares no `command_error`. It broadcasts its own `action_error` instead, typed as `ActionErrorMessage`. |
-| `eden-live` | All eight commands return `StateUpdate`; a refusal resolves `undefined` and surfaces through SDK `error` / `lastError` with the model's code. Its schema declares only `state_update`, so do not assume a generated `command_error` hook. |
+| `eden-live` | All eight commands return `StateUpdate`; a refusal resolves `undefined` and arrives on the SDK `error` event for that call with the model's code. Its schema declares only `state_update`, so do not assume a generated `command_error` hook. |
 | `x2` | declares no `command_error` at all from its 1.0.0 release, so there is no hook. The refusal is the command's own error reply, which the SDK records on `lastError` and raises on the `error` event. |
 
 A refusal is never the awaited value, so `undefined` — not a message with an

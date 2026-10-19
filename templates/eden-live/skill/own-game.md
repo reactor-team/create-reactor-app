@@ -31,7 +31,8 @@ capsule character walks, runs, and jumps around a small scene in
 | `public/references/` | The reference image of each world. |
 
 The app handles the rest: when the user picks a world it switches the source to
-`client`, stages the world's reference image and prompt, and starts the world.
+`client`, and stages the world's reference image and prompt. The world begins when the
+user presses Start.
 
 ## Add a world
 
@@ -105,8 +106,8 @@ which has the full workflow and a library of three.js modules for larger games.
 - A steady 10 to 60 fps from `canvas.captureStream(fps)`.
 - Call `set_source("client")` before `set_image` (in game mode `set_image`
   needs a game first), then `set_prompt` and `start`. Every command replies
-  with `state_update`, or resolves `undefined` when refused; read the reason
-  from `useReactorClient().getLastError()`.
+  with `state_update`, or resolves `undefined` when refused; send it through
+  `sendCommand` in `app/lib/model.ts` to get that call's reason.
 - `game_state`, `health`, `outcome`, and `events` stay empty in this mode.
 
 In another app, the same path takes a canvas and the typed SDK

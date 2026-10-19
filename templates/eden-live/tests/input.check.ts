@@ -224,3 +224,24 @@ test("image limits reject unsafe inputs before upload", () => {
   );
   assert.throws(() => validateImage({ ...file, size: 0 }, 10, 10), /non-empty/);
 });
+
+test("reset lets a new session's keys skip a send stuck in the old one", async () => {
+  const sent: string[][] = [];
+  let first = true;
+  const keys = createKeySender(
+    async (next) => {
+      if (first) {
+        first = false;
+        return new Promise<void>(() => {});
+      }
+      sent.push(next);
+    },
+    () => {}
+  );
+  void keys.press("w");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(first, false);
+  keys.reset();
+  await keys.press("a");
+  assert.deepEqual(sent, [["a"]]);
+});

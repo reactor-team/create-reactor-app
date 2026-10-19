@@ -1,12 +1,18 @@
 // One resolver is shared by every SDK request. Never persist browser tokens.
 import type { JwtRequestContext } from "@reactor-team/js-sdk";
-let cached: { jwt: string; expiresAt: number } | null = null;
+type Token = { jwt: string; expiresAt: number };
+let cached: Token | null = null;
 let inflight: Promise<string> | null = null;
+// Reactor binds a session to the JWT that created it. Pin that token on the
+// session's first hop, so a later refresh for a new connection cannot
+// replace it.
+const bySession = new Map<string, Token>();
 export async function fetchToken(context?: JwtRequestContext): Promise<string> {
   const now = Date.now();
-  // An existing session belongs to its original JWT. Never silently replace it.
   if (context?.sessionId) {
-    if (cached && now < cached.expiresAt) return cached.jwt;
+    let token = bySession.get(context.sessionId);
+    if (!token && cached) bySession.set(context.sessionId, (token = cached));
+    if (token && now < token.expiresAt) return token.jwt;
     throw new Error("Session token expired. Disconnect and connect again.");
   }
   if (cached && now < cached.expiresAt - 60_000) return cached.jwt;
