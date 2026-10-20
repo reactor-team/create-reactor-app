@@ -1,0 +1,15 @@
+Eden Live starter
+Copyright 2026 Reactor Technologies, Inc.
+
+This template includes material from EdenLive
+(https://github.com/VAST-AI-Research/EdenLive), Copyright (c) 2026 Vast AI,
+licensed under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0):
+
+- public/games/*.webp: the opening frame of each built-in game, rendered by the
+  game code in realtime/games/<game>/first-frame.png at commit 8f5d16e, resized
+  to 320x176 and converted to WebP. Upstream folders: freeze, spiders, tracer,
+  deepwater-shock (bioshock), kaiju-rampage (godzilla), arcadeduel, and
+  desert-crossfire (dust2).
+- skill/own-game.md: parts adapted from the game-prototype-turbo skill in
+  realtime/skills/game-prototype-turbo, shortened and rewritten.
