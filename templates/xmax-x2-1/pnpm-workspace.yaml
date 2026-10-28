@@ -1,0 +1,3 @@
+packages: []
+minimumReleaseAgeExclude:
+  - "@reactor-models/xmax-x2-1@2.0.0"
