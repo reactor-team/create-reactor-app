@@ -153,3 +153,27 @@
 .dark *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* Acting controls share the existing Happy Oyster theme. Scope these helpers
+   so the world composer and transport retain their established styling. */
+.avatar-experience .panel {
+  @apply rounded-xl border border-white/10 bg-white/[0.03] p-4;
+}
+.avatar-experience .eyebrow {
+  @apply text-[10px] uppercase tracking-wider text-zinc-500;
+}
+.avatar-experience .field {
+  @apply mt-1.5 block w-full rounded-md border border-border bg-black/30 p-2.5 text-sm text-foreground;
+}
+.avatar-experience .button {
+  @apply cursor-pointer rounded-md border border-border px-3 py-2 text-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40;
+}
+.avatar-experience .button.primary {
+  @apply border-primary bg-primary text-primary-foreground hover:bg-primary hover:brightness-95;
+}
+.avatar-experience .muted {
+  @apply text-xs leading-relaxed text-zinc-400;
+}
+.avatar-experience :is(button, input, textarea, select):focus-visible {
+  @apply outline-2 outline-offset-2 outline-primary;
+}

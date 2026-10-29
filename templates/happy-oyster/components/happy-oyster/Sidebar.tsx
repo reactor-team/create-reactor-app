@@ -12,6 +12,7 @@
 // client-side and the world stays ready for another run.
 
 import { useEffect, useRef, useState } from "react";
+import type { HappyOysterMode } from "@reactor-models/happy-oyster";
 import { TRAVEL_SECONDS } from "@/lib/worlds";
 import { Button } from "@/components/ui/button";
 import type { WorldSession } from "./use-world-session";
@@ -22,7 +23,13 @@ import { AdventureControls } from "./AdventureControls";
 import { DirectingControls } from "./DirectingControls";
 import { ModeBadge, SectionLabel, Spinner, WorldIdChip } from "./ui";
 
-export function Sidebar({ session }: { session: WorldSession }) {
+export function Sidebar({
+  session,
+  mode,
+}: {
+  session: WorldSession;
+  mode: HappyOysterMode;
+}) {
   const { view } = session;
   return (
     <aside className="order-2 flex w-full flex-col gap-4 lg:order-1 lg:w-80 lg:shrink-0 lg:overflow-y-auto lg:pr-1">
@@ -31,8 +38,8 @@ export function Sidebar({ session }: { session: WorldSession }) {
       {view.kind === "browse" && (
         <>
           <Gallery onIntent={session.run} />
-          <CustomCompose onIntent={session.run} />
-          <AttachById onIntent={session.run} />
+          <CustomCompose onIntent={session.run} initialMode={mode} />
+          <AttachById onIntent={session.run} initialMode={mode} />
         </>
       )}
       {(view.kind === "connecting" || view.kind === "building") && (
@@ -192,7 +199,7 @@ function TravelDeck({ session }: { session: WorldSession }) {
 function useTravelTimer(
   active: boolean,
   totalSeconds: number,
-  onExpire: () => void,
+  onExpire: () => void
 ): number {
   const deadline = useRef<number | null>(null);
   const expired = useRef(false);
@@ -211,7 +218,7 @@ function useTravelTimer(
     const tick = () => {
       const remaining = Math.max(
         0,
-        Math.round((deadline.current! - Date.now()) / 1000),
+        Math.round((deadline.current! - Date.now()) / 1000)
       );
       setLeft(remaining);
       if (remaining <= 0 && !expired.current) {

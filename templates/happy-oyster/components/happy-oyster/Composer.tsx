@@ -6,6 +6,7 @@
 // Both resolve to a WorldIntent the session then runs.
 
 import { useState } from "react";
+import type { HappyOysterMode } from "@reactor-models/happy-oyster";
 import { MAX_FIRST_FRAME_IMAGE_BYTES } from "@reactor-models/happy-oyster";
 import type { WorldIntent } from "@/lib/worlds";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,13 @@ import { SectionLabel } from "./ui";
 
 export function CustomCompose({
   onIntent,
+  initialMode = "adventure",
 }: {
   onIntent: (intent: WorldIntent) => void;
+  initialMode?: HappyOysterMode;
 }) {
   const [prompt, setPrompt] = useState("");
-  const [mode, setMode] = useState<1 | 2>(1);
+  const [mode, setMode] = useState<1 | 2>(initialMode !== "adventure" ? 2 : 1);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   // Mode-specific creation knobs. perspective/resolution carry the model's
@@ -169,13 +172,15 @@ export function CustomCompose({
 
 export function AttachById({
   onIntent,
+  initialMode = "adventure",
 }: {
   onIntent: (intent: WorldIntent) => void;
+  initialMode?: HappyOysterMode;
 }) {
   const [id, setId] = useState("");
   // A world only attaches through its own experience's model, so the attach
   // has to connect to the matching mode — pick it here.
-  const [mode, setMode] = useState<1 | 2>(1);
+  const [mode, setMode] = useState<1 | 2>(initialMode !== "adventure" ? 2 : 1);
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
       <SectionLabel>Return to an existing world</SectionLabel>

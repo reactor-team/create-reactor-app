@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { MODEL_NAMES } from "@reactor-models/happy-oyster";
+import { MODEL_NAME as ACTING_MODEL_NAME } from "@reactor-models/happy-oyster-acting/core";
 
 // The models this app drives. A mode is fixed for the life of a session and
 // picks which model the provider connects to, so the token has to be scoped
-// to both. Reading `MODEL_NAMES` off the typed package rather than writing
+// to all three. Reading `MODEL_NAMES` off the typed package rather than writing
 // the names here keeps the scope from drifting from what the provider
 // actually connects with — a scope that misses the connect name mints fine
 // and then 403s on connect().
-const SCOPED_MODELS = Object.values(MODEL_NAMES);
+const SCOPED_MODELS = [
+  ...new Set([...Object.values(MODEL_NAMES), ACTING_MODEL_NAME]),
+];
 
 // Session budget for one token — how many sessions it may ever create
 // (closed sessions still count). The client reuses one token for its whole
@@ -43,7 +46,7 @@ export async function GET() {
   if (!apiKey) {
     return NextResponse.json(
       { error: "REACTOR_API_KEY is not set on the server" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
@@ -71,7 +74,7 @@ export async function GET() {
   if (!res.ok) {
     return NextResponse.json(
       { error: `Reactor /tokens returned ${res.status}` },
-      { status: 502 },
+      { status: 502 }
     );
   }
 
@@ -88,6 +91,6 @@ export async function GET() {
       headers: {
         "Cache-Control": "private, no-store",
       },
-    },
+    }
   );
 }
