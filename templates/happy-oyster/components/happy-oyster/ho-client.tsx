@@ -76,7 +76,7 @@ export function useHappyOysterClient(): HappyOysterClient {
   const ctx = useContext(ClientContext);
   if (!ctx) {
     throw new Error(
-      "useHappyOysterClient must be used within a client provider",
+      "useHappyOysterClient must be used within a client provider"
     );
   }
   return ctx.client;
@@ -104,50 +104,9 @@ const providerOptions = LOCAL_RUNTIME
   ? { local: true, ...(REACTOR_API_URL ? { apiUrl: REACTOR_API_URL } : {}) }
   : { apiUrl: REACTOR_API_URL ?? "https://api.reactor.inc" };
 
-// JWT resolver: the SDK calls it on every Reactor Platform HTTP hop, so a
-// short-lived token can't age out mid-session.
-//
-// The token is memoized here, in module scope, until shortly before it expires,
-// and the fetch is no-store so the browser HTTP cache stays out of it. Holding
-// the token in the app rather than in the browser cache is what makes its
-// lifetime observable: a cache the app owns cannot be emptied out from under a
-// live session by DevTools "Disable cache" or an eviction, and one mint then
-// serves every hop of that session. (An app that downscopes its token with
-// `authorization_details` needs this for correctness, since a session may only
-// be operated by the token that created it. This route mints an account-scoped
-// token, so here it is one round trip instead of many.)
-const TOKEN_REFRESH_SKEW_MS = 60_000;
-let cachedToken: { jwt: string; expiresAtMs: number } | null = null;
-let inflightToken: Promise<string> | null = null;
-
-async function fetchToken(): Promise<string> {
-  if (
-    cachedToken &&
-    Date.now() < cachedToken.expiresAtMs - TOKEN_REFRESH_SKEW_MS
-  ) {
-    return cachedToken.jwt;
-  }
-  // Coalesce the parallel hops the SDK fires at connect time into one mint.
-  if (inflightToken) return inflightToken;
-  inflightToken = (async () => {
-    try {
-      const r = await fetch("/api/reactor/token", { cache: "no-store" });
-      if (!r.ok) {
-        const body = (await r.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? `Token fetch failed: ${r.status}`);
-      }
-      const { jwt, expires_at } = (await r.json()) as {
-        jwt: string;
-        expires_at: number;
-      };
-      cachedToken = { jwt, expiresAtMs: expires_at * 1000 };
-      return jwt;
-    } finally {
-      inflightToken = null;
-    }
-  })();
-  return inflightToken;
-}
+// Preserve the same scoped token for every hop of a session. Only rotate
+// before a fresh connect; refreshing in an active session would orphan it.
+import { fetchToken, prepareToken } from "@/lib/reactor-auth";
 
 // The mode is fixed for the life of the session — it picks which Reactor model
 // (adventure or directing) the session connects to — so the provider is mounted
@@ -184,7 +143,10 @@ function LiveClientBridge({ children }: { children: ReactNode }) {
 
   const connect = useCallback(() => {
     setLastError(null);
-    return ho.connect(LOCAL_RUNTIME ? undefined : fetchToken).catch((cause) => {
+    return (async () => {
+      if (!LOCAL_RUNTIME) await prepareToken();
+      await ho.connect(LOCAL_RUNTIME ? undefined : fetchToken);
+    })().catch((cause) => {
       setLastError(describeError(cause));
       throw cause;
     });
@@ -214,7 +176,7 @@ function LiveClientBridge({ children }: { children: ReactNode }) {
       resume: ho.resume,
       rewind: ho.rewind,
     }),
-    [ho, travelStatus, lastError, connect],
+    [ho, travelStatus, lastError, connect]
   );
 
   const value = useMemo<ClientContextValue>(
@@ -224,7 +186,7 @@ function LiveClientBridge({ children }: { children: ReactNode }) {
         <HappyOysterVideo className="absolute inset-0 h-full w-full object-contain" />
       ),
     }),
-    [client],
+    [client]
   );
 
   return (
