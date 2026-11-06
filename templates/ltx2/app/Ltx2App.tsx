@@ -372,8 +372,8 @@ function Workspace() {
     async (preset: Preset) => {
       setPresetPending(preset.id);
       try {
-        // Portraits are not committed (see public/presets/README.md). When one
-        // is missing, apply everything except the image so the command
+        // A preset's portrait ships in public/presets/<id>.jpg. When one is
+        // missing, apply everything except the image so the command
         // sequence is still visible and the user can upload their own face.
         const res = await fetch(preset.portrait).catch(() => null);
         const blob =
