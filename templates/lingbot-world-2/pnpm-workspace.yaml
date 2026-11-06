@@ -3,5 +3,5 @@
 packages: []
 
 allowBuilds:
-  msw: true
-  sharp: true
+  msw: false
+  sharp: false
