@@ -12,7 +12,7 @@
     "@anthropic-ai/sdk": "1.8.0",
     "@reactor-models/pika-h3-flex": "3.0.2",
     "@reactor-team/ui": "1.4.1",
-    "next": "15.5.26",
+    "next": "15.5.28",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "0.0.1"
