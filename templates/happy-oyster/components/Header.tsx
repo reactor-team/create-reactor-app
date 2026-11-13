@@ -6,7 +6,7 @@ export function Header() {
           HappyOyster
         </h1>
         <span className="hidden border-l border-zinc-800 pl-3 text-[11px] uppercase tracking-wider text-zinc-500 sm:inline">
-          Direct and explore worlds
+          Explore, direct, and bring characters to life
         </span>
       </div>
       <div className="flex items-center gap-3">

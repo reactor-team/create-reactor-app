@@ -1,8 +1,13 @@
-# This folder is its own pnpm workspace root, so `pnpm install` here installs
-# the app's own dependencies even when the folder lives inside another workspace.
+# Keep this template an independent pnpm project when cloned or scaffolded.
 packages: []
 
 allowBuilds:
-  core-js: false
-  msw: true
   sharp: true
+  # MSW arrives through the shadcn CLI; the example does not use its worker setup.
+  msw: false
+  # core-js uses postinstall only for an informational message.
+  core-js: false
+
+# Reviewed first-party release; exempt only this exact version from the age gate.
+minimumReleaseAgeExclude:
+  - "@reactor-models/happy-oyster-acting@0.1.0"
