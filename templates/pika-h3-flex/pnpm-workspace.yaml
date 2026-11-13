@@ -1,0 +1,11 @@
+# This folder is its own pnpm workspace root, so `pnpm install` here installs
+# the app's own dependencies even when the folder lives inside another workspace.
+packages: []
+# pnpm skips releases younger than its minimum release age (one day by
+# default). Our own typed SDK ships alongside this template, so exempt that one
+# pinned version; everything else still waits.
+minimumReleaseAgeExclude:
+  - "@reactor-models/pika-h3-flex@3.0.2"
+
+allowBuilds:
+  sharp: true
