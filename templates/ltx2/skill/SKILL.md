@@ -482,11 +482,11 @@ validated against the live model, and each prompt goes out inside the camera
 lock described below. Treat them as reference conditions; a new preset should
 earn its place the same way, by running well live, not by reading well.
 
-Portraits are not committed (see `public/presets/README.md`). When one is
-missing the preset applies everything except the image and says so, rather than
-failing; the row falls back to the preset's monogram. That fallback probes the
-image client-side rather than using `<img onError>`, because an SSR'd img can
-fail before hydration and the error event never reaches React.
+Portraits ship in `public/presets/<id>.jpg`, one file per preset id. When one
+is missing the preset applies everything except the image and says so, rather
+than failing; the row falls back to the preset's monogram. That fallback probes
+the image client-side rather than using `<img onError>`, because an SSR'd img
+can fail before hydration and the error event never reaches React.
 
 ## Locking the camera in the scene prompt
 

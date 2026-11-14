@@ -26,10 +26,9 @@ export interface Preset {
   /**
    * Public path to the portrait uploaded as the avatar image.
    *
-   * Portraits are NOT committed to this repo — see public/presets/README.md
-   * for the sourcing policy. When the file is missing the row falls back to
-   * the monogram and the preset applies everything except the image, so a
-   * fresh clone still runs and still teaches the command sequence.
+   * Ships in public/presets/<id>.jpg. When the file is missing the row falls
+   * back to the monogram and the preset applies everything except the image,
+   * so the app still runs and still teaches the command sequence.
    */
   portrait: string;
   /** Single letter shown in place of a missing portrait. */
