@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/* Tailwind v4 theme aliases.
+ *
+ * Pull the Reactor brand tokens out of @reactor-team/ui/styles.css
+ * (loaded in layout.tsx) and re-expose them as Tailwind utilities:
+ *
+ *   bg-brand / text-brand / border-brand   → cream-gold accent
+ *   text-brand-fg                           → readable text on the brand bg
+ *   bg-active / text-active                 → "connected/live" green
+ *   font-sans / font-mono                   → Aeonik + IBM Plex Mono
+ *
+ * We deliberately don't import the lib's React components - those
+ * use hooks internally and force consumers into "use client". The
+ * CSS vars are pure design tokens with no runtime cost.
+ */
+@theme {
+  --font-sans: var(--reactor-font-sans);
+  --font-mono: var(--reactor-font-mono);
+
+  --color-brand: var(--reactor-color-light-gold);
+  --color-brand-fg: var(--reactor-color-interstellar);
+  --color-active: var(--reactor-color-flora-light);
+
+  /* A bar that sweeps while something with no known end is in progress. */
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  /* Three bars that bounce while a scene plays. */
+  --animate-eq: eq 0.9s ease-in-out infinite;
+
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
+
+  @keyframes eq {
+    0%,
+    100% {
+      transform: scaleY(0.3);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+}
+
+html,
+body {
+  background: #09090b;
+  color: #e4e4e7;
+  font-family:
+    var(--reactor-font-sans),
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+textarea,
+input,
+select {
+  font-family: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
