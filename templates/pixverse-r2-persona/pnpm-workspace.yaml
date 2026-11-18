@@ -1,0 +1,6 @@
+# This folder is its own pnpm workspace root, so `pnpm install` here installs
+# the app's own dependencies even when the folder lives inside another workspace.
+packages: []
+
+minimumReleaseAgeExclude:
+  - "@reactor-models/pixverse-r2-persona@0.1.1"
