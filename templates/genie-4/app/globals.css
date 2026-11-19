@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/* Same brand aliases and neutral surfaces as the XMAX X2.1 reference.
+ * Fonts and brand colors come from @reactor-team/ui/styles.css in layout.tsx.
+ * Reuse components/ui for buttons, panels, labels and focus treatment.
+ */
+@theme {
+  --font-sans: var(--reactor-font-sans);
+  --font-mono: var(--reactor-font-mono);
+  --color-brand: var(--reactor-color-light-gold);
+  --color-brand-fg: var(--reactor-color-interstellar);
+  --color-active: var(--reactor-color-flora-light);
+}
+html,
+body {
+  background: #09090b;
+  color: #e4e4e7;
+  color-scheme: dark;
+  font-family:
+    var(--reactor-font-sans),
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+textarea,
+input {
+  font-family: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+.panel {
+  @apply rounded-lg border border-zinc-800 bg-zinc-900/40 p-3;
+}
+.eyebrow {
+  @apply font-mono text-[10px] uppercase tracking-wider text-zinc-400;
+}
+textarea,
+input[type="text"] {
+  @apply w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 disabled:opacity-40;
+}
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  @apply outline-none ring-2 ring-brand/60 ring-offset-1 ring-offset-zinc-950;
+}
+.error {
+  @apply rounded-md border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1024px) {
+  .world-stage {
+    container-type: size;
+  }
+  .world-frame {
+    width: min(100cqw, calc(100cqh * 16 / 9));
+  }
+}
