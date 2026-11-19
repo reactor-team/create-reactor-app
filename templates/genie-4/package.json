@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@reactor-models/genie-4": "0.1.4",
+    "@reactor-models/genie-4": "0.1.5",
     "@reactor-team/js-sdk": "3.3.0",
     "@reactor-team/ui": "^1.4.1",
     "hls.js": "^1.6.0",

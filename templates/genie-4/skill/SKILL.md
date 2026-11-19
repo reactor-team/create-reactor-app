@@ -10,7 +10,7 @@ One world runs for up to 60 seconds; ending it leaves the connection available
 for another. You have cloned this folder: decide which phase owns a new control
 before changing the component tree.
 
-It uses the typed package `@reactor-models/genie-4@0.1.4` on base SDK `3.3.0`.
+It uses the typed package `@reactor-models/genie-4@0.1.5` on base SDK `3.3.0`.
 
 ## Four concepts
 

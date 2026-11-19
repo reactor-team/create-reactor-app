@@ -3,7 +3,7 @@
 packages: []
 
 minimumReleaseAgeExclude:
-  - "@reactor-models/genie-4@0.1.4"
+  - "@reactor-models/genie-4@0.1.5"
 
 allowBuilds:
   sharp: true
