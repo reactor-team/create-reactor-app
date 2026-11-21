@@ -10,7 +10,7 @@
   "dependencies": {
     "@reactor-models/xmax-x2-1": "2.0.0",
     "@reactor-team/ui": "^1.4.1",
-    "next": "^15.5.21",
+    "next": "^15.5.29",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
