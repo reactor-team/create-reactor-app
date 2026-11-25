@@ -1,0 +1,5 @@
+packages: []
+minimumReleaseAgeExclude:
+  - "@reactor-models/abot-world-halo@1.9.0"
+allowBuilds:
+  sharp: true
